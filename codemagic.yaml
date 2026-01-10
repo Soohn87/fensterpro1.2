@@ -12,14 +12,13 @@ workflows:
       - name: Flutter Pub Get
         script: flutter pub get
 
-      - name: CocoaPods (HARD clean + update Firebase Performance)
+      - name: CocoaPods (clean install repo-update)
         script: |
           cd ios
           rm -rf Pods Podfile.lock
           rm -rf ~/Library/Caches/CocoaPods
-          pod repo update
-          pod update Firebase/Performance
           pod install --repo-update
+
 
       - name: Build iOS IPA
         script: flutter build ipa --release
