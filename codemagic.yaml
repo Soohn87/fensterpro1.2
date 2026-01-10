@@ -10,7 +10,7 @@ workflows:
       - name: Flutter Pub Get
         script: flutter pub get
 
-            - name: CocoaPods (clean + repo update + install)
+      - name: CocoaPods (clean + repo update + install)
         script: |
           cd ios
           rm -rf Pods Podfile.lock
