@@ -1,16 +1,18 @@
 workflows:
   ios-workflow:
-    name: iOS Workflow
+    name: FensterPro iOS Workflow
     max_build_duration: 120
+
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
+
     scripts:
       - name: Flutter Pub Get
         script: flutter pub get
 
-           - name: CocoaPods (HARD clean + update)
+      - name: CocoaPods (HARD clean + update Firebase Performance)
         script: |
           cd ios
           rm -rf Pods Podfile.lock
@@ -19,10 +21,9 @@ workflows:
           pod update Firebase/Performance
           pod install --repo-update
 
-
-
       - name: Build iOS IPA
         script: flutter build ipa --release
+
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
