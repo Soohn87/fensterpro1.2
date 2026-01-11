@@ -7,14 +7,13 @@ workflows:
       flutter: 3.22.3
 
     scripts:
-      - name: Flutter Pub Get
-        script: flutter pub get
-
-      - name: Build APK (release)
+      - name: Clean + Pub Get
         script: |
           flutter clean
           flutter pub get
-          flutter build apk --release
+
+      - name: Build APK (release)
+        script: flutter build apk --release
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
