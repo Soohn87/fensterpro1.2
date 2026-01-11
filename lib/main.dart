@@ -86,8 +86,14 @@ class FensterItem {
 
 class TuerItem {
   final String tuerNr;
+
+  /// Maßart: "Türblattmaß" oder "Öffnungsmaß"
+  final String massArt;
+
+  /// je nach Maßart sind das Türblatt-Maße ODER Öffnungsmaße
   final String breiteMm;
   final String hoeheMm;
+
   final String din;
   final String oeffnungsrichtung;
   final String zarge;
@@ -100,6 +106,7 @@ class TuerItem {
 
   const TuerItem({
     required this.tuerNr,
+    required this.massArt,
     required this.breiteMm,
     required this.hoeheMm,
     required this.din,
@@ -113,6 +120,7 @@ class TuerItem {
     required this.notizen,
   });
 }
+
 
 /// ===============================
 /// APP STATE (einfach, offline)
