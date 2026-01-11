@@ -7,16 +7,27 @@ workflows:
       flutter: 3.22.3
 
     scripts:
-      - name: Clean + Pub Get
-        script: |
-          flutter clean
-          flutter pub get
+  - name: Debug project structure
+    script: |
+      echo "=== ROOT FILES ==="
+      ls -la
 
-      - name: Build APK (release) + list output
-        script: |
-          flutter build apk --release
-          echo "=== APK FILES ==="
-          find build/app/outputs -type f -name "*.apk" -print
+      echo "=== ANDROID FOLDER ==="
+      ls -la android || true
+      ls -la android/app || true
 
-    artifacts:
-      - build/app/outputs/**/*.apk
+      echo "=== FLUTTER DOCTOR ==="
+      flutter doctor -v
+
+  - name: Build APK (release)
+    script: |
+      flutter clean
+      flutter pub get
+      flutter build apk --release
+
+      echo "=== SEARCH ALL APKS UNDER BUILD ==="
+      find build -type f -name "*.apk" -print || true
+
+      echo "=== SEARCH ALL APKS UNDER REPO ==="
+      find . -type f -name "*.apk" -print || true
+
