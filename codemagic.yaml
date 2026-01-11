@@ -1,28 +1,17 @@
 workflows:
-  ios-workflow:
-    name: FensterPro iOS Workflow
+  android-workflow:
+    name: FensterPro Android Build
     max_build_duration: 120
 
     environment:
       flutter: stable
-      xcode: latest
-      cocoapods: default
 
     scripts:
       - name: Flutter Pub Get
         script: flutter pub get
 
-      - name: CocoaPods (clean install repo-update)
-        script: |
-          cd ios
-          rm -rf Pods Podfile.lock
-          rm -rf ~/Library/Caches/CocoaPods
-          pod install --repo-update
-
-
-      - name: Build iOS IPA
-        script: flutter build ipa --release
+      - name: Build APK (release)
+        script: flutter build apk --release
 
     artifacts:
-      - build/ios/ipa/*.ipa
-      - build/ios/archive/*.xcarchive
+      - build/app/outputs/flutter-apk/app-release.apk
