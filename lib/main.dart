@@ -857,9 +857,9 @@ class _FensterFormScreenState extends State<FensterFormScreen> {
               tf(_fensterNr, "FensterNr. *"),
               Row(
                 children: [
-                  Expanded(child: tf(_breite, "Breite (mm) *", keyboard: TextInputType.number)),
-                  const SizedBox(width: 10),
-                  Expanded(child: tf(_hoehe, "Höhe (mm) *", keyboard: TextInputType.number)),
+                  tf(_breite, "Breite (mm) *", keyboard: TextInputType.number),
+tf(_hoehe, "Höhe (mm) *", keyboard: TextInputType.number),
+
                 ],
               ),
               dd(
