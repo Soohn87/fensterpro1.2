@@ -12,8 +12,12 @@ workflows:
           flutter clean
           flutter pub get
 
-      - name: Build APK (release)
-        script: flutter build apk --release
+            - name: Build APK (release)
+        script: |
+          flutter build apk --release
+          echo "=== APK FILES ==="
+          find build/app/outputs -type f -name "*.apk" -print
+
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
