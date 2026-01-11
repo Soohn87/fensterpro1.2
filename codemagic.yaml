@@ -31,5 +31,5 @@ workflows:
       echo "=== SEARCH ALL APKS UNDER REPO ==="
       find . -type f -name "*.apk" -print || true
 
-artifacts:
-  - "**/*.apk"
+    artifacts:
+      - "**/*.apk"
