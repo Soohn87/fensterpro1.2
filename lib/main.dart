@@ -479,25 +479,92 @@ class RoomDetailScreen extends StatelessWidget {
             padding: const EdgeInsets.all(14),
             child: Column(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _BigButton(
-                        icon: Icons.window,
-                        title: "Fenster",
-                        subtitle: "Erfassen / ansehen",
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => FensterListScreen(
-                              title: "Fenster • ${rr.name}",
-                              getItems: () => rr.fenster,
-                              onAdd: (item) => state.addFenster(projectId, roomId, item),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+               GridView.count(
+  crossAxisCount: 2,
+  shrinkWrap: true,
+  physics: const NeverScrollableScrollPhysics(),
+  crossAxisSpacing: 12,
+  mainAxisSpacing: 12,
+  childAspectRatio: 1.25,
+  children: [
+    _BigButton(
+      icon: Icons.window,
+      title: "Fenster",
+      subtitle: "Erfassen / ansehen",
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => FensterListScreen(
+            title: "Fenster • ${rr.name}",
+            getItems: () => rr.fenster,
+            onAdd: (item) => state.addFenster(projectId, roomId, item),
+          ),
+        ),
+      ),
+    ),
+
+    _BigButton(
+      icon: Icons.door_front_door,
+      title: "Zimmertüren",
+      subtitle: "Erfassen / ansehen",
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TuerenListScreen(
+            title: "Zimmertüren • ${rr.name}",
+            getItems: () => rr.tueren,
+            onAdd: (item) => state.addTuer(projectId, roomId, item),
+          ),
+        ),
+      ),
+    ),
+
+    _BigButton(
+      icon: Icons.meeting_room,
+      title: "Haustüren",
+      subtitle: "Erfassen / ansehen",
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Haustüren kommt als nächstes ✅")),
+        );
+      },
+    ),
+
+    _BigButton(
+      icon: Icons.bug_report,
+      title: "Fliegengitter",
+      subtitle: "Erfassen / ansehen",
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Fliegengitter kommt als nächstes ✅")),
+        );
+      },
+    ),
+
+    _BigButton(
+      icon: Icons.blinds,
+      title: "Rollladen",
+      subtitle: "Erfassen / ansehen",
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Rollladen kommt als nächstes ✅")),
+        );
+      },
+    ),
+
+    _BigButton(
+      icon: Icons.roofing,
+      title: "Dachfenster",
+      subtitle: "Erfassen / ansehen",
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Dachfenster kommt als nächstes ✅")),
+        );
+      },
+    ),
+  ],
+),
+
                     const SizedBox(width: 12),
                     Expanded(
                       child: _BigButton(
