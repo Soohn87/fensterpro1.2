@@ -1,35 +1,35 @@
 workflows:
   android-workflow:
-    name: FensterPro Android Build
+    name: FensterPro Android Build (Debug)
     max_build_duration: 120
 
     environment:
       flutter: 3.22.3
 
     scripts:
-  - name: Debug project structure
-    script: |
-      echo "=== ROOT FILES ==="
-      ls -la
+      - name: Debug project structure
+        script: |
+          echo "=== ROOT FILES ==="
+          ls -la
 
-      echo "=== ANDROID FOLDER ==="
-      ls -la android || true
-      ls -la android/app || true
+          echo "=== ANDROID FOLDER ==="
+          ls -la android || true
+          ls -la android/app || true
 
-      echo "=== FLUTTER DOCTOR ==="
-      flutter doctor -v
+          echo "=== FLUTTER DOCTOR ==="
+          flutter doctor -v
 
-  - name: Build APK (release)
-    script: |
-      flutter clean
-      flutter pub get
-      flutter build apk --release
+      - name: Build APK (release)
+        script: |
+          flutter clean
+          flutter pub get
+          flutter build apk --release
 
-      echo "=== SEARCH ALL APKS UNDER BUILD ==="
-      find build -type f -name "*.apk" -print || true
+          echo "=== SEARCH ALL APKS UNDER BUILD ==="
+          find build -type f -name "*.apk" -print || true
 
-      echo "=== SEARCH ALL APKS UNDER REPO ==="
-      find . -type f -name "*.apk" -print || true
+          echo "=== SEARCH ALL APKS UNDER REPO ==="
+          find . -type f -name "*.apk" -print || true
 
     artifacts:
       - "**/*.apk"
