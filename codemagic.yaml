@@ -19,5 +19,6 @@ workflows:
           find build/app/outputs -type f -name "*.apk" -print
 
 
-    artifacts:
-      - build/app/outputs/flutter-apk/app-release.apk
+        artifacts:
+      - build/app/outputs/**/*.apk
+      - build/**/outputs/**/*.apk
