@@ -475,16 +475,19 @@ class ProjectDetailScreen extends StatelessWidget {
               if (name == null) return;
 
               state.addRoom(
-                projectId,
-                Room(
-                  id: DateTime.now().microsecondsSinceEpoch.toString(),
-                  name: name,
-                  fenster: [],
-                  tueren: [],
-                  haustueren: [],
-                ),
-              );
-            },
+  projectId,
+  Room(
+    id: DateTime.now().microsecondsSinceEpoch.toString(),
+    name: name,
+    fenster: [],
+    tueren: [],
+    haustueren: [],
+    rollaeden: [],
+    fliegengitter: [],
+    dachfenster: [],
+  ),
+);
+
             icon: const Icon(Icons.add),
             label: const Text("Raum hinzufügen"),
           ),
