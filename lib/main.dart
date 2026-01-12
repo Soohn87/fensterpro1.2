@@ -45,12 +45,14 @@ class Room {
   final String name;
   final List<FensterItem> fenster;
   final List<TuerItem> tueren;
+  final List<HaustuerItem> haustueren;
 
   Room({
     required this.id,
     required this.name,
     required this.fenster,
     required this.tueren,
+    required this.haustueren,
   });
 }
 
@@ -65,7 +67,7 @@ class FensterItem {
   final String glasart;
   final String glasDicke;
   final String sicherheitsstufe;
-  final String barrierefrei; // ja/nein
+  final String barrierefrei;
   final String notizen;
 
   const FensterItem({
@@ -87,10 +89,10 @@ class FensterItem {
 class TuerItem {
   final String tuerNr;
 
-  /// Maßart: "Türblattmaß" oder "Öffnungsmaß"
+  /// "Türblattmaß" oder "Öffnungsmaß"
   final String massArt;
 
-  /// je nach Maßart sind das Türblatt-Maße ODER Öffnungsmaße
+  /// je nach Maßart sind das Türblatt- oder Öffnungsmaße
   final String breiteMm;
   final String hoeheMm;
 
@@ -121,9 +123,40 @@ class TuerItem {
   });
 }
 
+class HaustuerItem {
+  final String haustuerNr;
+  final String breiteMm;
+  final String hoeheMm;
+  final String din;
+  final String oeffnungsrichtung;
+  final String rahmenart;
+  final String farbeAussen;
+  final String farbeInnen;
+  final String glasart;
+  final String glasDicke;
+  final String sicherheitsstufe;
+  final String barrierefrei;
+  final String notizen;
+
+  const HaustuerItem({
+    required this.haustuerNr,
+    required this.breiteMm,
+    required this.hoeheMm,
+    required this.din,
+    required this.oeffnungsrichtung,
+    required this.rahmenart,
+    required this.farbeAussen,
+    required this.farbeInnen,
+    required this.glasart,
+    required this.glasDicke,
+    required this.sicherheitsstufe,
+    required this.barrierefrei,
+    required this.notizen,
+  });
+}
 
 /// ===============================
-/// APP STATE (einfach, offline)
+/// APP STATE
 /// ===============================
 class AppState extends ChangeNotifier {
   final List<Project> projects = [];
@@ -155,6 +188,13 @@ class AppState extends ChangeNotifier {
     final p = projects.firstWhere((p) => p.id == projectId);
     final r = p.rooms.firstWhere((r) => r.id == roomId);
     r.tueren.add(item);
+    notifyListeners();
+  }
+
+  void addHaustuer(String projectId, String roomId, HaustuerItem item) {
+    final p = projects.firstWhere((p) => p.id == projectId);
+    final r = p.rooms.firstWhere((r) => r.id == roomId);
+    r.haustueren.add(item);
     notifyListeners();
   }
 }
@@ -326,7 +366,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
 }
 
 /// ===============================
-/// Project Detail
+/// Project Detail (Rooms)
 /// ===============================
 class ProjectDetailScreen extends StatelessWidget {
   final AppState state;
@@ -340,20 +380,18 @@ class ProjectDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = state.projects.firstWhere((p) => p.id == projectId);
-
     return AnimatedBuilder(
       animation: state,
       builder: (context, _) {
-        final proj = state.projects.firstWhere((x) => x.id == projectId);
+        final proj = state.projects.firstWhere((p) => p.id == projectId);
+
         return Scaffold(
-          appBar: AppBar(
-            title: Text(proj.name),
-          ),
+          appBar: AppBar(title: Text(proj.name)),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () async {
               final name = await _askRoomName(context);
               if (name == null) return;
+
               state.addRoom(
                 projectId,
                 Room(
@@ -361,6 +399,7 @@ class ProjectDetailScreen extends StatelessWidget {
                   name: name,
                   fenster: [],
                   tueren: [],
+                  haustueren: [],
                 ),
               );
             },
@@ -376,7 +415,7 @@ class ProjectDetailScreen extends StatelessWidget {
                   lines: [
                     "Kunde: ${proj.customer.isEmpty ? "—" : proj.customer}",
                     "Adresse: ${proj.address.isEmpty ? "—" : proj.address}",
-                    "Erstellt: ${proj.createdAt.day}.${proj.createdAt.month}.${proj.createdAt.year}",
+                    "Erstellt: ${_fmtDate(proj.createdAt)}",
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -387,7 +426,10 @@ class ProjectDetailScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Expanded(
                   child: proj.rooms.isEmpty
-                      ? const _EmptyState(text: "Noch keine Räume.\nTippe auf „Raum hinzufügen“. ")
+                      ? const _EmptyState(
+                          text:
+                              "Noch keine Räume.\nTippe auf „Raum hinzufügen“.",
+                        )
                       : ListView.separated(
                           itemCount: proj.rooms.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 10),
@@ -396,7 +438,7 @@ class ProjectDetailScreen extends StatelessWidget {
                             return _ListCard(
                               title: r.name,
                               subtitle:
-                                  "Fenster: ${r.fenster.length} • Türen: ${r.tueren.length}",
+                                  "Fenster: ${r.fenster.length} • Zimmertüren: ${r.tueren.length} • Haustüren: ${r.haustueren.length}",
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -432,7 +474,9 @@ class ProjectDetailScreen extends StatelessWidget {
           decoration: const InputDecoration(hintText: "z.B. Wohnzimmer"),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Abbrechen")),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Abbrechen")),
           FilledButton(
             onPressed: () {
               final v = c.text.trim();
@@ -448,7 +492,7 @@ class ProjectDetailScreen extends StatelessWidget {
 }
 
 /// ===============================
-/// Room Detail
+/// Room Detail (Kategorie Buttons)
 /// ===============================
 class RoomDetailScreen extends StatelessWidget {
   final AppState state;
@@ -464,133 +508,110 @@ class RoomDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = state.projects.firstWhere((p) => p.id == projectId);
-    final r = p.rooms.firstWhere((r) => r.id == roomId);
+    final proj = state.projects.firstWhere((p) => p.id == projectId);
+    final room = proj.rooms.firstWhere((r) => r.id == roomId);
 
     return AnimatedBuilder(
       animation: state,
       builder: (context, _) {
-        final pp = state.projects.firstWhere((p) => p.id == projectId);
-        final rr = pp.rooms.firstWhere((r) => r.id == roomId);
+        final p = state.projects.firstWhere((p) => p.id == projectId);
+        final r = p.rooms.firstWhere((r) => r.id == roomId);
 
         return Scaffold(
-          appBar: AppBar(title: Text(rr.name)),
+          appBar: AppBar(title: Text(r.name)),
           body: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
               children: [
-               GridView.count(
-  crossAxisCount: 2,
-  shrinkWrap: true,
-  physics: const NeverScrollableScrollPhysics(),
-  crossAxisSpacing: 12,
-  mainAxisSpacing: 12,
-  childAspectRatio: 1.25,
-  children: [
-    _BigButton(
-      icon: Icons.window,
-      title: "Fenster",
-      subtitle: "Erfassen / ansehen",
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => FensterListScreen(
-            title: "Fenster • ${rr.name}",
-            getItems: () => rr.fenster,
-            onAdd: (item) => state.addFenster(projectId, roomId, item),
-          ),
-        ),
-      ),
-    ),
-
-    _BigButton(
-      icon: Icons.door_front_door,
-      title: "Zimmertüren",
-      subtitle: "Erfassen / ansehen",
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => TuerenListScreen(
-            title: "Zimmertüren • ${rr.name}",
-            getItems: () => rr.tueren,
-            onAdd: (item) => state.addTuer(projectId, roomId, item),
-          ),
-        ),
-      ),
-    ),
-
-    _BigButton(
-      icon: Icons.meeting_room,
-      title: "Haustüren",
-      subtitle: "Erfassen / ansehen",
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Haustüren kommt als nächstes ✅")),
-        );
-      },
-    ),
-
-    _BigButton(
-      icon: Icons.bug_report,
-      title: "Fliegengitter",
-      subtitle: "Erfassen / ansehen",
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Fliegengitter kommt als nächstes ✅")),
-        );
-      },
-    ),
-
-    _BigButton(
-      icon: Icons.blinds,
-      title: "Rollladen",
-      subtitle: "Erfassen / ansehen",
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Rollladen kommt als nächstes ✅")),
-        );
-      },
-    ),
-
-    _BigButton(
-      icon: Icons.roofing,
-      title: "Dachfenster",
-      subtitle: "Erfassen / ansehen",
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Dachfenster kommt als nächstes ✅")),
-        );
-      },
-    ),
-  ],
-),
-
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _BigButton(
-                        icon: Icons.door_front_door,
-                        title: "Zimmertüren",
-                        subtitle: "Erfassen / ansehen",
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => TuerenListScreen(
-                              title: "Zimmertüren • ${rr.name}",
-                              getItems: () => rr.tueren,
-                              onAdd: (item) => state.addTuer(projectId, roomId, item),
-                            ),
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.25,
+                  children: [
+                    _BigButton(
+                      icon: Icons.window,
+                      title: "Fenster",
+                      subtitle: "Erfassen / ansehen",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FensterListScreen(
+                            title: "Fenster • ${r.name}",
+                            getItems: () => r.fenster,
+                            onAdd: (item) => state.addFenster(projectId, roomId, item),
                           ),
                         ),
                       ),
                     ),
+                    _BigButton(
+                      icon: Icons.door_front_door,
+                      title: "Zimmertüren",
+                      subtitle: "Erfassen / ansehen",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => TuerenListScreen(
+                            title: "Zimmertüren • ${r.name}",
+                            getItems: () => r.tueren,
+                            onAdd: (item) => state.addTuer(projectId, roomId, item),
+                          ),
+                        ),
+                      ),
+                    ),
+                    _BigButton(
+                      icon: Icons.meeting_room,
+                      title: "Haustüren",
+                      subtitle: "Erfassen / ansehen",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => HaustuerListScreen(
+                            title: "Haustüren • ${r.name}",
+                            getItems: () => r.haustueren,
+                            onAdd: (item) => state.addHaustuer(projectId, roomId, item),
+                          ),
+                        ),
+                      ),
+                    ),
+                    _BigButton(
+                      icon: Icons.bug_report,
+                      title: "Fliegengitter",
+                      subtitle: "kommt gleich",
+                      onTap: () => _toast(context, "Fliegengitter kommt als nächstes ✅"),
+                    ),
+                    _BigButton(
+                      icon: Icons.blinds,
+                      title: "Rollladen",
+                      subtitle: "kommt gleich",
+                      onTap: () => _toast(context, "Rollladen kommt als nächstes ✅"),
+                    ),
+                    _BigButton(
+                      icon: Icons.roofing,
+                      title: "Dachfenster",
+                      subtitle: "kommt gleich",
+                      onTap: () => Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => RolladenListScreen(
+      title: "Rollladen • ${r.name}",
+      getItems: () => r.rollaeden,
+      onAdd: (item) => state.addRolladen(projectId, roomId, item),
+    ),
+  ),
+),
+
+                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 _InfoBox(
                   lines: [
-                    "Fenster erfasst: ${rr.fenster.length}",
-                    "Zimmertüren erfasst: ${rr.tueren.length}",
-                    "Tipp: Alles offline. Export (PDF/Excel) folgt als nächstes.",
+                    "Fenster: ${room.fenster.length}",
+                    "Zimmertüren: ${room.tueren.length}",
+                    "Haustüren: ${room.haustueren.length}",
                   ],
                 ),
               ],
@@ -600,10 +621,14 @@ class RoomDetailScreen extends StatelessWidget {
       },
     );
   }
+
+  void _toast(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
 }
 
 /// ===============================
-/// Fenster Screens (Room-based)
+/// FENSTER
 /// ===============================
 class FensterListScreen extends StatefulWidget {
   final String title;
@@ -649,7 +674,8 @@ class _FensterListScreenState extends State<FensterListScreen> {
                 final f = items[i];
                 return _ListCard(
                   title: "Fenster ${f.fensterNr}",
-                  subtitle: "${f.breiteMm} × ${f.hoeheMm} mm • ${f.oeffnungsart} • DIN ${f.anschlagsrichtung}",
+                  subtitle:
+                      "${f.breiteMm} × ${f.hoeheMm} mm • ${f.oeffnungsart} • DIN ${f.anschlagsrichtung}",
                   onTap: () => _showFensterDetails(context, f),
                 );
               },
@@ -685,132 +711,15 @@ class _FensterListScreenState extends State<FensterListScreen> {
                 const Text("Notizen", style: TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
                 Text(f.notizen),
-              ]
+              ],
             ],
           ),
         ),
       ),
     );
   }
-
-  Widget _kv(String k, String v) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: Row(
-          children: [
-            Expanded(flex: 4, child: Text(k, style: const TextStyle(fontSize: 13, color: Colors.black54))),
-            Expanded(flex: 6, child: Text(v, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
-          ],
-        ),
-      );
 }
 
-/// ===============================
-/// Türen Screens (Room-based)
-/// ===============================
-class TuerenListScreen extends StatefulWidget {
-  final String title;
-  final List<TuerItem> Function() getItems;
-  final void Function(TuerItem item) onAdd;
-
-  const TuerenListScreen({
-    super.key,
-    required this.title,
-    required this.getItems,
-    required this.onAdd,
-  });
-
-  @override
-  State<TuerenListScreen> createState() => _TuerenListScreenState();
-}
-
-class _TuerenListScreenState extends State<TuerenListScreen> {
-  @override
-  Widget build(BuildContext context) {
-    final items = widget.getItems();
-
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final res = await Navigator.push<TuerItem?>(
-            context,
-            MaterialPageRoute(builder: (_) => const TuerFormScreen()),
-          );
-          if (res != null) setState(() => widget.onAdd(res));
-        },
-        icon: const Icon(Icons.add),
-        label: const Text("Neu"),
-      ),
-      body: items.isEmpty
-          ? const _EmptyState(text: "Noch keine Türen erfasst.\nTippe auf „Neu“.")
-          : ListView.separated(
-              padding: const EdgeInsets.all(14),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, i) {
-                final t = items[i];
-                return _ListCard(
-                  title: "Tür ${t.tuerNr}",
-                  subtitle: "${t.breiteMm} × ${t.hoeheMm} mm • DIN ${t.din} • ${t.oeffnungsrichtung}",
-                  onTap: () => _showDetails(context, t),
-                );
-              },
-            ),
-    );
-  }
-
-  void _showDetails(BuildContext context, TuerItem t) {
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      builder: (_) {
-        Widget kv(String k, String v) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 5),
-              child: Row(
-                children: [
-                  Expanded(flex: 4, child: Text(k, style: const TextStyle(fontSize: 13, color: Colors.black54))),
-                  Expanded(flex: 6, child: Text(v, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
-                ],
-              ),
-            );
-
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Tür ${t.tuerNr}",
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 10),
-                kv("Breite", "${t.breiteMm} mm"),
-                kv("Höhe", "${t.hoeheMm} mm"),
-                kv("DIN", t.din),
-                kv("Öffnungsrichtung", t.oeffnungsrichtung),
-                kv("Zarge", t.zarge),
-                kv("Wandstärke", "${t.wandstaerkeMm} mm"),
-                kv("Türblatt", t.tuerblatt),
-                kv("Farbe", t.farbe),
-                kv("Schloss/Garnitur", t.schlossGarnitur),
-                kv("Barrierefrei", t.barrierefrei),
-                if (t.notizen.trim().isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  const Text("Notizen", style: TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
-                  Text(t.notizen),
-                ]
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// ===============================
-/// Forms (reuse from earlier)
-/// ===============================
 class FensterFormScreen extends StatefulWidget {
   const FensterFormScreen({super.key});
 
@@ -850,6 +759,7 @@ class _FensterFormScreenState extends State<FensterFormScreen> {
 
   void _save() {
     if (!_formKey.currentState!.validate()) return;
+
     final item = FensterItem(
       fensterNr: _fensterNr.text.trim(),
       breiteMm: _breite.text.trim(),
@@ -864,6 +774,7 @@ class _FensterFormScreenState extends State<FensterFormScreen> {
       barrierefrei: _barrierefrei ? "Ja" : "Nein",
       notizen: _notizen.text.trim(),
     );
+
     Navigator.pop(context, item);
   }
 
@@ -930,17 +841,18 @@ class _FensterFormScreenState extends State<FensterFormScreen> {
           child: ListView(
             children: [
               tf(_fensterNr, "FensterNr. *"),
-              Row(
-                children: [
-                  tf(_breite, "Breite (mm) *", keyboard: TextInputType.number),
-tf(_hoehe, "Höhe (mm) *", keyboard: TextInputType.number),
-
-                ],
-              ),
+              tf(_breite, "Breite (mm) *", keyboard: TextInputType.number),
+              tf(_hoehe, "Höhe (mm) *", keyboard: TextInputType.number),
               dd(
                 label: "Öffnungsart *",
                 value: _oeffnungsart,
-                items: const ["Dreh/Kipp", "Dreh", "Kipp", "Schiebefenster", "Festverglasung"],
+                items: const [
+                  "Dreh/Kipp",
+                  "Dreh",
+                  "Kipp",
+                  "Schiebefenster",
+                  "Festverglasung"
+                ],
                 onChanged: (v) => setState(() => _oeffnungsart = v),
               ),
               dd(
@@ -979,6 +891,112 @@ tf(_hoehe, "Höhe (mm) *", keyboard: TextInputType.number),
   }
 }
 
+/// ===============================
+/// ZIMMER TÜREN
+/// ===============================
+class TuerenListScreen extends StatefulWidget {
+  final String title;
+  final List<TuerItem> Function() getItems;
+  final void Function(TuerItem item) onAdd;
+
+  const TuerenListScreen({
+    super.key,
+    required this.title,
+    required this.getItems,
+    required this.onAdd,
+  });
+
+  @override
+  State<TuerenListScreen> createState() => _TuerenListScreenState();
+}
+
+class _TuerenListScreenState extends State<TuerenListScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.getItems();
+
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final res = await Navigator.push<TuerItem?>(
+            context,
+            MaterialPageRoute(builder: (_) => const TuerFormScreen()),
+          );
+          if (res != null) setState(() => widget.onAdd(res));
+        },
+        icon: const Icon(Icons.add),
+        label: const Text("Neu"),
+      ),
+      body: items.isEmpty
+          ? const _EmptyState(text: "Noch keine Türen erfasst.\nTippe auf „Neu“.")
+          : ListView.separated(
+              padding: const EdgeInsets.all(14),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, i) {
+                final t = items[i];
+                return _ListCard(
+                  title: "Tür ${t.tuerNr}",
+                  subtitle:
+                      "${t.massArt} • ${t.breiteMm} × ${t.hoeheMm} mm • DIN ${t.din} • ${t.oeffnungsrichtung}",
+                  onTap: () => _showDetails(context, t),
+                );
+              },
+            ),
+    );
+  }
+
+  void _showDetails(BuildContext context, TuerItem t) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Tür ${t.tuerNr}",
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 10),
+                _kv("Maßart", t.massArt),
+                _kv(
+                  t.massArt == "Türblattmaß"
+                      ? "Türblatt Breite"
+                      : "Öffnungsmaß Breite",
+                  "${t.breiteMm} mm",
+                ),
+                _kv(
+                  t.massArt == "Türblattmaß"
+                      ? "Türblatt Höhe"
+                      : "Öffnungsmaß Höhe",
+                  "${t.hoeheMm} mm",
+                ),
+                _kv("DIN", t.din),
+                _kv("Öffnungsrichtung", t.oeffnungsrichtung),
+                _kv("Zarge", t.zarge),
+                _kv("Wandstärke", "${t.wandstaerkeMm} mm"),
+                _kv("Türblatt", t.tuerblatt),
+                _kv("Farbe", t.farbe),
+                _kv("Schloss/Garnitur", t.schlossGarnitur),
+                _kv("Barrierefrei", t.barrierefrei),
+                if (t.notizen.trim().isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  const Text("Notizen", style: TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  Text(t.notizen),
+                ]
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class TuerFormScreen extends StatefulWidget {
   const TuerFormScreen({super.key});
 
@@ -998,6 +1016,7 @@ class _TuerFormScreenState extends State<TuerFormScreen> {
   final _schloss = TextEditingController();
   final _notizen = TextEditingController();
 
+  String _massArt = "Türblattmaß";
   String _din = "Links";
   String _richtung = "Nach innen";
   String _zarge = "Umfassungszarge";
@@ -1014,25 +1033,6 @@ class _TuerFormScreenState extends State<TuerFormScreen> {
     _schloss.dispose();
     _notizen.dispose();
     super.dispose();
-  }
-
-  void _save() {
-    if (!_formKey.currentState!.validate()) return;
-    final item = TuerItem(
-      tuerNr: _tuerNr.text.trim(),
-      breiteMm: _breite.text.trim(),
-      hoeheMm: _hoehe.text.trim(),
-      din: _din,
-      oeffnungsrichtung: _richtung,
-      zarge: _zarge,
-      wandstaerkeMm: _wand.text.trim(),
-      tuerblatt: _tuerblatt.text.trim(),
-      farbe: _farbe.text.trim(),
-      schlossGarnitur: _schloss.text.trim(),
-      barrierefrei: _barrierefrei ? "Ja" : "Nein",
-      notizen: _notizen.text.trim(),
-    );
-    Navigator.pop(context, item);
   }
 
   @override
@@ -1089,6 +1089,27 @@ class _TuerFormScreenState extends State<TuerFormScreen> {
           ),
         );
 
+    void save() {
+      if (!_formKey.currentState!.validate()) return;
+
+      final item = TuerItem(
+        tuerNr: _tuerNr.text.trim(),
+        massArt: _massArt,
+        breiteMm: _breite.text.trim(),
+        hoeheMm: _hoehe.text.trim(),
+        din: _din,
+        oeffnungsrichtung: _richtung,
+        zarge: _zarge,
+        wandstaerkeMm: _wand.text.trim(),
+        tuerblatt: _tuerblatt.text.trim(),
+        farbe: _farbe.text.trim(),
+        schlossGarnitur: _schloss.text.trim(),
+        barrierefrei: _barrierefrei ? "Ja" : "Nein",
+        notizen: _notizen.text.trim(),
+      );
+      Navigator.pop(context, item);
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text("Neue Zimmertür")),
       body: Padding(
@@ -1098,14 +1119,34 @@ class _TuerFormScreenState extends State<TuerFormScreen> {
           child: ListView(
             children: [
               tf(_tuerNr, "TürNr. *"),
-              Row(
-                children: [
-                  Expanded(child: tf(_breite, "Breite (mm) *", keyboard: TextInputType.number)),
-                  const SizedBox(width: 10),
-                  Expanded(child: tf(_hoehe, "Höhe (mm) *", keyboard: TextInputType.number)),
+              const SizedBox(height: 6),
+              const Text("Maßart *", style: TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: "Türblattmaß", label: Text("Türblattmaß")),
+                  ButtonSegment(value: "Öffnungsmaß", label: Text("Öffnungsmaß")),
                 ],
+                selected: {_massArt},
+                onSelectionChanged: (s) => setState(() => _massArt = s.first),
               ),
-              dd(label: "DIN *", value: _din, items: const ["Links", "Rechts"], onChanged: (v) => setState(() => _din = v)),
+              const SizedBox(height: 12),
+              tf(
+                _breite,
+                _massArt == "Türblattmaß"
+                    ? "Türblatt Breite (mm) *"
+                    : "Öffnungsmaß Breite (mm) *",
+                keyboard: TextInputType.number,
+              ),
+              tf(
+                _hoehe,
+                _massArt == "Türblattmaß"
+                    ? "Türblatt Höhe (mm) *"
+                    : "Öffnungsmaß Höhe (mm) *",
+                keyboard: TextInputType.number,
+              ),
+              dd(label: "DIN *", value: _din, items: const ["Links", "Rechts"],
+                  onChanged: (v) => setState(() => _din = v)),
               dd(
                 label: "Öffnungsrichtung *",
                 value: _richtung,
@@ -1130,7 +1171,7 @@ class _TuerFormScreenState extends State<TuerFormScreen> {
               ml(_notizen, "Notizen (optional)"),
               const SizedBox(height: 14),
               FilledButton.icon(
-                onPressed: _save,
+                onPressed: save,
                 icon: const Icon(Icons.check),
                 label: const Text("Speichern"),
               ),
@@ -1143,7 +1184,265 @@ class _TuerFormScreenState extends State<TuerFormScreen> {
 }
 
 /// ===============================
-/// UI Helpers
+/// HAUSTÜREN
+/// ===============================
+class HaustuerListScreen extends StatefulWidget {
+  final String title;
+  final List<HaustuerItem> Function() getItems;
+  final void Function(HaustuerItem item) onAdd;
+
+  const HaustuerListScreen({
+    super.key,
+    required this.title,
+    required this.getItems,
+    required this.onAdd,
+  });
+
+  @override
+  State<HaustuerListScreen> createState() => _HaustuerListScreenState();
+}
+
+class _HaustuerListScreenState extends State<HaustuerListScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.getItems();
+
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final res = await Navigator.push<HaustuerItem?>(
+            context,
+            MaterialPageRoute(builder: (_) => const HaustuerFormScreen()),
+          );
+          if (res != null) setState(() => widget.onAdd(res));
+        },
+        icon: const Icon(Icons.add),
+        label: const Text("Neu"),
+      ),
+      body: items.isEmpty
+          ? const _EmptyState(text: "Noch keine Haustüren erfasst.\nTippe auf „Neu“.")
+          : ListView.separated(
+              padding: const EdgeInsets.all(14),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, i) {
+                final t = items[i];
+                return _ListCard(
+                  title: "Haustür ${t.haustuerNr}",
+                  subtitle: "${t.breiteMm} × ${t.hoeheMm} mm • DIN ${t.din} • ${t.sicherheitsstufe}",
+                  onTap: () => _showDetails(context, t),
+                );
+              },
+            ),
+    );
+  }
+
+  void _showDetails(BuildContext context, HaustuerItem t) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Haustür ${t.haustuerNr}",
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 10),
+                _kv("Breite", "${t.breiteMm} mm"),
+                _kv("Höhe", "${t.hoeheMm} mm"),
+                _kv("DIN", t.din),
+                _kv("Öffnungsrichtung", t.oeffnungsrichtung),
+                _kv("Rahmenart/Zarge", t.rahmenart),
+                _kv("Farbe außen", t.farbeAussen),
+                _kv("Farbe innen", t.farbeInnen),
+                _kv("Glasart", t.glasart),
+                _kv("Glasdicke", "${t.glasDicke} mm"),
+                _kv("Sicherheitsstufe", t.sicherheitsstufe),
+                _kv("Barrierefrei", t.barrierefrei),
+                if (t.notizen.trim().isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  const Text("Notizen", style: TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  Text(t.notizen),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class HaustuerFormScreen extends StatefulWidget {
+  const HaustuerFormScreen({super.key});
+
+  @override
+  State<HaustuerFormScreen> createState() => _HaustuerFormScreenState();
+}
+
+class _HaustuerFormScreenState extends State<HaustuerFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _nr = TextEditingController();
+  final _breite = TextEditingController();
+  final _hoehe = TextEditingController();
+  final _rahmenart = TextEditingController();
+  final _farbeAussen = TextEditingController();
+  final _farbeInnen = TextEditingController();
+  final _glasDicke = TextEditingController();
+  final _notizen = TextEditingController();
+
+  String _din = "Links";
+  String _richtung = "Nach innen";
+  String _glasart = "Keine";
+  String _sicherheit = "Standard";
+  bool _barrierefrei = false;
+
+  @override
+  void dispose() {
+    _nr.dispose();
+    _breite.dispose();
+    _hoehe.dispose();
+    _rahmenart.dispose();
+    _farbeAussen.dispose();
+    _farbeInnen.dispose();
+    _glasDicke.dispose();
+    _notizen.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget tf(TextEditingController c, String label,
+        {TextInputType keyboard = TextInputType.text}) {
+      final required = label.contains("*");
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: TextFormField(
+          controller: c,
+          keyboardType: keyboard,
+          decoration: InputDecoration(
+            labelText: label,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          validator: (v) {
+            if (!required) return null;
+            if (v == null || v.trim().isEmpty) return "Pflichtfeld";
+            return null;
+          },
+        ),
+      );
+    }
+
+    Widget dd({
+      required String label,
+      required String value,
+      required List<String> items,
+      required ValueChanged<String> onChanged,
+    }) =>
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) => onChanged(v ?? value),
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    Widget ml(TextEditingController c, String label) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: TextFormField(
+            controller: c,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    void save() {
+      if (!_formKey.currentState!.validate()) return;
+
+      final item = HaustuerItem(
+        haustuerNr: _nr.text.trim(),
+        breiteMm: _breite.text.trim(),
+        hoeheMm: _hoehe.text.trim(),
+        din: _din,
+        oeffnungsrichtung: _richtung,
+        rahmenart: _rahmenart.text.trim(),
+        farbeAussen: _farbeAussen.text.trim(),
+        farbeInnen: _farbeInnen.text.trim(),
+        glasart: _glasart,
+        glasDicke: _glasDicke.text.trim(),
+        sicherheitsstufe: _sicherheit,
+        barrierefrei: _barrierefrei ? "Ja" : "Nein",
+        notizen: _notizen.text.trim(),
+      );
+
+      Navigator.pop(context, item);
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Neue Haustür")),
+      body: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              tf(_nr, "HaustürNr. *"),
+              tf(_breite, "Öffnungsmaß Breite (mm) *", keyboard: TextInputType.number),
+              tf(_hoehe, "Öffnungsmaß Höhe (mm) *", keyboard: TextInputType.number),
+              dd(label: "DIN *", value: _din, items: const ["Links", "Rechts"], onChanged: (v) => setState(() => _din = v)),
+              dd(label: "Öffnungsrichtung *", value: _richtung, items: const ["Nach innen", "Nach außen"], onChanged: (v) => setState(() => _richtung = v)),
+              tf(_rahmenart, "Rahmenart/Zarge *"),
+              tf(_farbeAussen, "Farbe außen *"),
+              tf(_farbeInnen, "Farbe innen *"),
+              dd(
+                label: "Glasart *",
+                value: _glasart,
+                items: const ["Keine", "Klarglas", "Milchglas", "Ornament", "Sicherheitsglas"],
+                onChanged: (v) => setState(() => _glasart = v),
+              ),
+              tf(_glasDicke, "Glasdicke (mm) *", keyboard: TextInputType.number),
+              dd(
+                label: "Sicherheitsstufe *",
+                value: _sicherheit,
+                items: const ["Standard", "RC1", "RC2", "RC3"],
+                onChanged: (v) => setState(() => _sicherheit = v),
+              ),
+              SwitchListTile(
+                value: _barrierefrei,
+                onChanged: (v) => setState(() => _barrierefrei = v),
+                title: const Text("Barrierefrei"),
+              ),
+              ml(_notizen, "Notizen (optional)"),
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: save,
+                icon: const Icon(Icons.check),
+                label: const Text("Speichern"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ===============================
+/// SHARED UI
 /// ===============================
 class _BigButton extends StatelessWidget {
   final IconData icon;
@@ -1253,6 +1552,282 @@ class _ListCard extends StatelessWidget {
                 ),
               ),
               const Icon(Icons.chevron_right),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _kv(String k, String v) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Expanded(flex: 4, child: Text(k, style: const TextStyle(fontSize: 13, color: Colors.black54))),
+          Expanded(flex: 6, child: Text(v, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+
+String _fmtDate(DateTime dt) {
+  final d = dt.day.toString().padLeft(2, "0");
+  final m = dt.month.toString().padLeft(2, "0");
+  final y = dt.year.toString();
+  return "$d.$m.$y";
+}
+// =======================================================
+// ROLLLADEN – LISTE + FORMULAR + DETAILS
+// =======================================================
+
+class RolladenListScreen extends StatefulWidget {
+  final String title;
+  final List<RolladenItem> Function() getItems;
+  final void Function(RolladenItem item) onAdd;
+
+  const RolladenListScreen({
+    super.key,
+    required this.title,
+    required this.getItems,
+    required this.onAdd,
+  });
+
+  @override
+  State<RolladenListScreen> createState() => _RolladenListScreenState();
+}
+
+class _RolladenListScreenState extends State<RolladenListScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.getItems();
+
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final res = await Navigator.push<RolladenItem?>(
+            context,
+            MaterialPageRoute(builder: (_) => const RolladenFormScreen()),
+          );
+          if (res != null) setState(() => widget.onAdd(res));
+        },
+        icon: const Icon(Icons.add),
+        label: const Text("Neu"),
+      ),
+      body: items.isEmpty
+          ? const _EmptyState(
+              text: "Noch keine Rollläden erfasst.\nTippe auf „Neu“.",
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(14),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, i) {
+                final r = items[i];
+                return _ListCard(
+                  title: "Rollladen ${r.rolladenNr}",
+                  subtitle:
+                      "${r.breiteMm} × ${r.hoeheMm} mm • ${r.kastenart} • ${r.antrieb}",
+                  onTap: () => _showDetails(context, r),
+                );
+              },
+            ),
+    );
+  }
+
+  void _showDetails(BuildContext context, RolladenItem r) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Rollladen ${r.rolladenNr}",
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 10),
+              _kv("Breite", "${r.breiteMm} mm"),
+              _kv("Höhe", "${r.hoeheMm} mm"),
+              _kv("Kastenart", r.kastenart),
+              _kv("Kastenhöhe", "${r.kastenhoeheMm} mm"),
+              _kv("Panzerprofil", r.panzerprofil),
+              _kv("Farbe", r.farbe),
+              _kv("Antrieb", r.antrieb),
+              _kv("Barrierefrei", r.barrierefrei),
+              if (r.notizen.trim().isNotEmpty) ...[
+                const SizedBox(height: 10),
+                const Text("Notizen", style: TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                Text(r.notizen),
+              ]
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class RolladenFormScreen extends StatefulWidget {
+  const RolladenFormScreen({super.key});
+
+  @override
+  State<RolladenFormScreen> createState() => _RolladenFormScreenState();
+}
+
+class _RolladenFormScreenState extends State<RolladenFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _nr = TextEditingController();
+  final _breite = TextEditingController();
+  final _hoehe = TextEditingController();
+  final _kastenhoehe = TextEditingController();
+  final _farbe = TextEditingController();
+  final _notizen = TextEditingController();
+
+  String _kastenart = "Aufsatzkasten";
+  String _panzer = "Alu";
+  String _antrieb = "Gurt";
+  bool _barrierefrei = false;
+
+  @override
+  void dispose() {
+    _nr.dispose();
+    _breite.dispose();
+    _hoehe.dispose();
+    _kastenhoehe.dispose();
+    _farbe.dispose();
+    _notizen.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget tf(TextEditingController c, String label,
+        {TextInputType keyboard = TextInputType.text}) {
+      final required = label.contains("*");
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: TextFormField(
+          controller: c,
+          keyboardType: keyboard,
+          decoration: InputDecoration(
+            labelText: label,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          validator: (v) {
+            if (!required) return null;
+            if (v == null || v.trim().isEmpty) return "Pflichtfeld";
+            return null;
+          },
+        ),
+      );
+    }
+
+    Widget dd({
+      required String label,
+      required String value,
+      required List<String> items,
+      required ValueChanged<String> onChanged,
+    }) =>
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) => onChanged(v ?? value),
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    Widget ml(TextEditingController c, String label) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: TextFormField(
+            controller: c,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    void save() {
+      if (!_formKey.currentState!.validate()) return;
+
+      final item = RolladenItem(
+        rolladenNr: _nr.text.trim(),
+        breiteMm: _breite.text.trim(),
+        hoeheMm: _hoehe.text.trim(),
+        kastenart: _kastenart,
+        kastenhoeheMm: _kastenhoehe.text.trim(),
+        panzerprofil: _panzer,
+        farbe: _farbe.text.trim(),
+        antrieb: _antrieb,
+        barrierefrei: _barrierefrei ? "Ja" : "Nein",
+        notizen: _notizen.text.trim(),
+      );
+
+      Navigator.pop(context, item);
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Neuer Rollladen")),
+      body: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              tf(_nr, "RollladenNr. *"),
+              tf(_breite, "Breite (mm) *", keyboard: TextInputType.number),
+              tf(_hoehe, "Höhe (mm) *", keyboard: TextInputType.number),
+
+              dd(
+                label: "Kastenart *",
+                value: _kastenart,
+                items: const ["Aufsatzkasten", "Vorbau", "Einbau"],
+                onChanged: (v) => setState(() => _kastenart = v),
+              ),
+
+              tf(_kastenhoehe, "Kastenhöhe (mm) (optional)",
+                  keyboard: TextInputType.number),
+
+              dd(
+                label: "Panzerprofil *",
+                value: _panzer,
+                items: const ["Alu", "PVC", "Sonstige"],
+                onChanged: (v) => setState(() => _panzer = v),
+              ),
+
+              tf(_farbe, "Farbe *"),
+
+              dd(
+                label: "Antrieb *",
+                value: _antrieb,
+                items: const ["Gurt", "Kurbel", "Motor"],
+                onChanged: (v) => setState(() => _antrieb = v),
+              ),
+
+              SwitchListTile(
+                value: _barrierefrei,
+                onChanged: (v) => setState(() => _barrierefrei = v),
+                title: const Text("Barrierefrei (Bedienung)"),
+              ),
+
+              ml(_notizen, "Notizen (optional)"),
+
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: save,
+                icon: const Icon(Icons.check),
+                label: const Text("Speichern"),
+              ),
             ],
           ),
         ),
