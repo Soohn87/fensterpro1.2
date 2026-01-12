@@ -288,6 +288,27 @@ class AppState extends ChangeNotifier {
     r.haustueren.add(item);
     notifyListeners();
   }
+    void addRolladen(String projectId, String roomId, RolladenItem item) {
+    final p = projects.firstWhere((p) => p.id == projectId);
+    final r = p.rooms.firstWhere((r) => r.id == roomId);
+    r.rollaeden.add(item);
+    notifyListeners();
+  }
+
+  void addFliegengitter(String projectId, String roomId, FliegengitterItem item) {
+    final p = projects.firstWhere((p) => p.id == projectId);
+    final r = p.rooms.firstWhere((r) => r.id == roomId);
+    r.fliegengitter.add(item);
+    notifyListeners();
+  }
+
+  void addDachfenster(String projectId, String roomId, DachfensterItem item) {
+    final p = projects.firstWhere((p) => p.id == projectId);
+    final r = p.rooms.firstWhere((r) => r.id == roomId);
+    r.dachfenster.add(item);
+    notifyListeners();
+  }
+
 }
 
 /// ===============================
