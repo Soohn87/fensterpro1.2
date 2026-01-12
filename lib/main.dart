@@ -154,6 +154,88 @@ class HaustuerItem {
     required this.notizen,
   });
 }
+// ===============================
+// ROLLLADEN
+// ===============================
+class RolladenItem {
+  final String rolladenNr;
+  final String breiteMm;
+  final String hoeheMm;
+  final String kastenart;
+  final String kastenhoeheMm;
+  final String panzerprofil;
+  final String farbe;
+  final String antrieb;
+  final String barrierefrei;
+  final String notizen;
+
+  const RolladenItem({
+    required this.rolladenNr,
+    required this.breiteMm,
+    required this.hoeheMm,
+    required this.kastenart,
+    required this.kastenhoeheMm,
+    required this.panzerprofil,
+    required this.farbe,
+    required this.antrieb,
+    required this.barrierefrei,
+    required this.notizen,
+  });
+}
+
+// ===============================
+// FLIEGENGITTER
+// ===============================
+class FliegengitterItem {
+  final String gitterNr;
+  final String breiteMm;
+  final String hoeheMm;
+  final String typ;
+  final String montage;
+  final String farbeRahmen;
+  final String gewebe;
+  final String notizen;
+
+  const FliegengitterItem({
+    required this.gitterNr,
+    required this.breiteMm,
+    required this.hoeheMm,
+    required this.typ,
+    required this.montage,
+    required this.farbeRahmen,
+    required this.gewebe,
+    required this.notizen,
+  });
+}
+
+// ===============================
+// DACHFENSTER
+// ===============================
+class DachfensterItem {
+  final String dachfensterNr;
+  final String hersteller;
+  final String typBezeichnung;
+  final String breiteMm;
+  final String hoeheMm;
+  final String oeffnungsart;
+  final String anschlag;
+  final String verglasung;
+  final String zusatz;
+  final String notizen;
+
+  const DachfensterItem({
+    required this.dachfensterNr,
+    required this.hersteller,
+    required this.typBezeichnung,
+    required this.breiteMm,
+    required this.hoeheMm,
+    required this.oeffnungsart,
+    required this.anschlag,
+    required this.verglasung,
+    required this.zusatz,
+    required this.notizen,
+  });
+}
 
 /// ===============================
 /// APP STATE
@@ -576,39 +658,50 @@ class RoomDetailScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    _BigButton(
-                      icon: Icons.bug_report,
-                      title: "Fliegengitter",
-                      subtitle: "kommt gleich",
-                      onTap: () => Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => FliegengitterListScreen(
-      title: "Fliegengitter • ${r.name}",
-      getItems: () => r.fliegengitter,
-      onAdd: (item) => state.addFliegengitter(projectId, roomId, item),
+ _BigButton(
+  icon: Icons.bug_report,
+  title: "Fliegengitter",
+  subtitle: "Erfassen / ansehen",
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => FliegengitterListScreen(
+        title: "Fliegengitter • ${r.name}",
+        getItems: () => r.fliegengitter,
+        onAdd: (item) => state.addFliegengitter(projectId, roomId, item),
+      ),
     ),
   ),
 ),
 
-                    ),
-                    _BigButton(
-                      icon: Icons.blinds,
-                      title: "Rollladen",
-                      subtitle: "kommt gleich",
-                      onTap: () => _toast(context, "Rollladen kommt als nächstes ✅"),
-                    ),
-                    _BigButton(
-                      icon: Icons.roofing,
-                      title: "Dachfenster",
-                      subtitle: "kommt gleich",
-                     onTap: () => Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => DachfensterListScreen(
-      title: "Dachfenster • ${r.name}",
-      getItems: () => r.dachfenster,
-      onAdd: (item) => state.addDachfenster(projectId, roomId, item),
+_BigButton(
+  icon: Icons.blinds,
+  title: "Rollladen",
+  subtitle: "Erfassen / ansehen",
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => RolladenListScreen(
+        title: "Rollladen • ${r.name}",
+        getItems: () => r.rollaeden,
+        onAdd: (item) => state.addRolladen(projectId, roomId, item),
+      ),
+    ),
+  ),
+),
+
+_BigButton(
+  icon: Icons.roofing,
+  title: "Dachfenster",
+  subtitle: "Erfassen / ansehen",
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => DachfensterListScreen(
+        title: "Dachfenster • ${r.name}",
+        getItems: () => r.dachfenster,
+        onAdd: (item) => state.addDachfenster(projectId, roomId, item),
+      ),
     ),
   ),
 ),
