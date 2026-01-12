@@ -43,9 +43,14 @@ class Project {
 class Room {
   final String id;
   final String name;
+
   final List<FensterItem> fenster;
   final List<TuerItem> tueren;
   final List<HaustuerItem> haustueren;
+
+  final List<RolladenItem> rollaeden;
+  final List<FliegengitterItem> fliegengitter;
+  final List<DachfensterItem> dachfenster;
 
   Room({
     required this.id,
@@ -53,8 +58,12 @@ class Room {
     required this.fenster,
     required this.tueren,
     required this.haustueren,
+    required this.rollaeden,
+    required this.fliegengitter,
+    required this.dachfenster,
   });
 }
+
 
 class FensterItem {
   final String fensterNr;
@@ -470,23 +479,28 @@ class ProjectDetailScreen extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(title: Text(proj.name)),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () async {
-              final name = await _askRoomName(context);
-              if (name == null) return;
+  onPressed: () async {
+    final name = await _askRoomName(context);
+    if (name == null) return;
 
-              state.addRoom(
-  projectId,
-  Room(
-    id: DateTime.now().microsecondsSinceEpoch.toString(),
-    name: name,
-    fenster: [],
-    tueren: [],
-    haustueren: [],
-    rollaeden: [],
-    fliegengitter: [],
-    dachfenster: [],
-  ),
-);
+    state.addRoom(
+      projectId,
+      Room(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        name: name,
+        fenster: [],
+        tueren: [],
+        haustueren: [],
+        rollaeden: [],
+        fliegengitter: [],
+        dachfenster: [],
+      ),
+    );
+  },
+  icon: const Icon(Icons.add),
+  label: const Text("Raum hinzufügen"),
+),
+
 
             icon: const Icon(Icons.add),
             label: const Text("Raum hinzufügen"),
@@ -616,98 +630,103 @@ class RoomDetailScreen extends StatelessWidget {
                   mainAxisSpacing: 12,
                   childAspectRatio: 1.25,
                   children: [
-                    _BigButton(
-                      icon: Icons.window,
-                      title: "Fenster",
-                      subtitle: "Erfassen / ansehen",
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => FensterListScreen(
-                            title: "Fenster • ${r.name}",
-                            getItems: () => r.fenster,
-                            onAdd: (item) => state.addFenster(projectId, roomId, item),
-                          ),
-                        ),
-                      ),
-                    ),
-                    _BigButton(
-                      icon: Icons.door_front_door,
-                      title: "Zimmertüren",
-                      subtitle: "Erfassen / ansehen",
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => TuerenListScreen(
-                            title: "Zimmertüren • ${r.name}",
-                            getItems: () => r.tueren,
-                            onAdd: (item) => state.addTuer(projectId, roomId, item),
-                          ),
-                        ),
-                      ),
-                    ),
-                    _BigButton(
-                      icon: Icons.meeting_room,
-                      title: "Haustüren",
-                      subtitle: "Erfassen / ansehen",
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => HaustuerListScreen(
-                            title: "Haustüren • ${r.name}",
-                            getItems: () => r.haustueren,
-                            onAdd: (item) => state.addHaustuer(projectId, roomId, item),
-                          ),
-                        ),
-                      ),
-                    ),
- _BigButton(
-  icon: Icons.bug_report,
-  title: "Fliegengitter",
-  subtitle: "Erfassen / ansehen",
-  onTap: () => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => FliegengitterListScreen(
-        title: "Fliegengitter • ${r.name}",
-        getItems: () => r.fliegengitter,
-        onAdd: (item) => state.addFliegengitter(projectId, roomId, item),
+  _BigButton(
+    icon: Icons.window,
+    title: "Fenster",
+    subtitle: "Erfassen / ansehen",
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FensterListScreen(
+          title: "Fenster • ${r.name}",
+          getItems: () => r.fenster,
+          onAdd: (item) => state.addFenster(projectId, roomId, item),
+        ),
       ),
     ),
   ),
-),
 
-_BigButton(
-  icon: Icons.blinds,
-  title: "Rollladen",
-  subtitle: "Erfassen / ansehen",
-  onTap: () => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => RolladenListScreen(
-        title: "Rollladen • ${r.name}",
-        getItems: () => r.rollaeden,
-        onAdd: (item) => state.addRolladen(projectId, roomId, item),
+  _BigButton(
+    icon: Icons.door_front_door,
+    title: "Zimmertüren",
+    subtitle: "Erfassen / ansehen",
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TuerenListScreen(
+          title: "Zimmertüren • ${r.name}",
+          getItems: () => r.tueren,
+          onAdd: (item) => state.addTuer(projectId, roomId, item),
+        ),
       ),
     ),
   ),
-),
 
-_BigButton(
-  icon: Icons.roofing,
-  title: "Dachfenster",
-  subtitle: "Erfassen / ansehen",
-  onTap: () => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => DachfensterListScreen(
-        title: "Dachfenster • ${r.name}",
-        getItems: () => r.dachfenster,
-        onAdd: (item) => state.addDachfenster(projectId, roomId, item),
+  _BigButton(
+    icon: Icons.meeting_room,
+    title: "Haustüren",
+    subtitle: "Erfassen / ansehen",
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HaustuerListScreen(
+          title: "Haustüren • ${r.name}",
+          getItems: () => r.haustueren,
+          onAdd: (item) => state.addHaustuer(projectId, roomId, item),
+        ),
       ),
     ),
   ),
-),
+
+  _BigButton(
+    icon: Icons.blinds,
+    title: "Rollladen",
+    subtitle: "Erfassen / ansehen",
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RolladenListScreen(
+          title: "Rollladen • ${r.name}",
+          getItems: () => r.rollaeden,
+          onAdd: (item) => state.addRolladen(projectId, roomId, item),
+        ),
+      ),
+    ),
+  ),
+
+  _BigButton(
+    icon: Icons.bug_report,
+    title: "Fliegengitter",
+    subtitle: "Erfassen / ansehen",
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FliegengitterListScreen(
+          title: "Fliegengitter • ${r.name}",
+          getItems: () => r.fliegengitter,
+          onAdd: (item) => state.addFliegengitter(projectId, roomId, item),
+        ),
+      ),
+    ),
+  ),
+
+  _BigButton(
+    icon: Icons.roofing,
+    title: "Dachfenster",
+    subtitle: "Erfassen / ansehen",
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DachfensterListScreen(
+          title: "Dachfenster • ${r.name}",
+          getItems: () => r.dachfenster,
+          onAdd: (item) => state.addDachfenster(projectId, roomId, item),
+        ),
+      ),
+    ),
+  ),
+],
+
 
   context,
   MaterialPageRoute(
