@@ -580,7 +580,17 @@ class RoomDetailScreen extends StatelessWidget {
                       icon: Icons.bug_report,
                       title: "Fliegengitter",
                       subtitle: "kommt gleich",
-                      onTap: () => _toast(context, "Fliegengitter kommt als nächstes ✅"),
+                      onTap: () => Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => FliegengitterListScreen(
+      title: "Fliegengitter • ${r.name}",
+      getItems: () => r.fliegengitter,
+      onAdd: (item) => state.addFliegengitter(projectId, roomId, item),
+    ),
+  ),
+),
+
                     ),
                     _BigButton(
                       icon: Icons.blinds,
@@ -592,7 +602,17 @@ class RoomDetailScreen extends StatelessWidget {
                       icon: Icons.roofing,
                       title: "Dachfenster",
                       subtitle: "kommt gleich",
-                      onTap: () => Navigator.push(
+                     onTap: () => Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => DachfensterListScreen(
+      title: "Dachfenster • ${r.name}",
+      getItems: () => r.dachfenster,
+      onAdd: (item) => state.addDachfenster(projectId, roomId, item),
+    ),
+  ),
+),
+
   context,
   MaterialPageRoute(
     builder: (_) => RolladenListScreen(
@@ -1820,6 +1840,506 @@ class _RolladenFormScreenState extends State<RolladenFormScreen> {
                 title: const Text("Barrierefrei (Bedienung)"),
               ),
 
+              ml(_notizen, "Notizen (optional)"),
+
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: save,
+                icon: const Icon(Icons.check),
+                label: const Text("Speichern"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+// =======================================================
+// FLIEGENGITTER – LISTE + FORMULAR + DETAILS
+// =======================================================
+
+class FliegengitterListScreen extends StatefulWidget {
+  final String title;
+  final List<FliegengitterItem> Function() getItems;
+  final void Function(FliegengitterItem item) onAdd;
+
+  const FliegengitterListScreen({
+    super.key,
+    required this.title,
+    required this.getItems,
+    required this.onAdd,
+  });
+
+  @override
+  State<FliegengitterListScreen> createState() => _FliegengitterListScreenState();
+}
+
+class _FliegengitterListScreenState extends State<FliegengitterListScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.getItems();
+
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final res = await Navigator.push<FliegengitterItem?>(
+            context,
+            MaterialPageRoute(builder: (_) => const FliegengitterFormScreen()),
+          );
+          if (res != null) setState(() => widget.onAdd(res));
+        },
+        icon: const Icon(Icons.add),
+        label: const Text("Neu"),
+      ),
+      body: items.isEmpty
+          ? const _EmptyState(
+              text: "Noch keine Fliegengitter erfasst.\nTippe auf „Neu“.",
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(14),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, i) {
+                final f = items[i];
+                return _ListCard(
+                  title: "Fliegengitter ${f.gitterNr}",
+                  subtitle: "${f.breiteMm} × ${f.hoeheMm} mm • ${f.typ} • ${f.montage}",
+                  onTap: () => _showDetails(context, f),
+                );
+              },
+            ),
+    );
+  }
+
+  void _showDetails(BuildContext context, FliegengitterItem f) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Fliegengitter ${f.gitterNr}",
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 10),
+              _kv("Breite", "${f.breiteMm} mm"),
+              _kv("Höhe", "${f.hoeheMm} mm"),
+              _kv("Typ", f.typ),
+              _kv("Montage", f.montage),
+              _kv("Rahmenfarbe", f.farbeRahmen),
+              _kv("Gewebe", f.gewebe),
+              if (f.notizen.trim().isNotEmpty) ...[
+                const SizedBox(height: 10),
+                const Text("Notizen", style: TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                Text(f.notizen),
+              ]
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FliegengitterFormScreen extends StatefulWidget {
+  const FliegengitterFormScreen({super.key});
+
+  @override
+  State<FliegengitterFormScreen> createState() => _FliegengitterFormScreenState();
+}
+
+class _FliegengitterFormScreenState extends State<FliegengitterFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _nr = TextEditingController();
+  final _breite = TextEditingController();
+  final _hoehe = TextEditingController();
+  final _farbeRahmen = TextEditingController();
+  final _notizen = TextEditingController();
+
+  String _typ = "Spannrahmen";
+  String _montage = "Innen";
+  String _gewebe = "Standard";
+
+  @override
+  void dispose() {
+    _nr.dispose();
+    _breite.dispose();
+    _hoehe.dispose();
+    _farbeRahmen.dispose();
+    _notizen.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget tf(TextEditingController c, String label,
+        {TextInputType keyboard = TextInputType.text}) {
+      final required = label.contains("*");
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: TextFormField(
+          controller: c,
+          keyboardType: keyboard,
+          decoration: InputDecoration(
+            labelText: label,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          validator: (v) {
+            if (!required) return null;
+            if (v == null || v.trim().isEmpty) return "Pflichtfeld";
+            return null;
+          },
+        ),
+      );
+    }
+
+    Widget dd({
+      required String label,
+      required String value,
+      required List<String> items,
+      required ValueChanged<String> onChanged,
+    }) =>
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) => onChanged(v ?? value),
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    Widget ml(TextEditingController c, String label) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: TextFormField(
+            controller: c,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    void save() {
+      if (!_formKey.currentState!.validate()) return;
+
+      final item = FliegengitterItem(
+        gitterNr: _nr.text.trim(),
+        breiteMm: _breite.text.trim(),
+        hoeheMm: _hoehe.text.trim(),
+        typ: _typ,
+        montage: _montage,
+        farbeRahmen: _farbeRahmen.text.trim(),
+        gewebe: _gewebe,
+        notizen: _notizen.text.trim(),
+      );
+
+      Navigator.pop(context, item);
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Neues Fliegengitter")),
+      body: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              tf(_nr, "FliegengitterNr. *"),
+              tf(_breite, "Breite (mm) *", keyboard: TextInputType.number),
+              tf(_hoehe, "Höhe (mm) *", keyboard: TextInputType.number),
+
+              dd(
+                label: "Typ *",
+                value: _typ,
+                items: const ["Spannrahmen", "Drehrahmen", "Schiebeanlage", "Plissee"],
+                onChanged: (v) => setState(() => _typ = v),
+              ),
+
+              dd(
+                label: "Montage *",
+                value: _montage,
+                items: const ["Innen", "Außen"],
+                onChanged: (v) => setState(() => _montage = v),
+              ),
+
+              tf(_farbeRahmen, "Rahmenfarbe *"),
+
+              dd(
+                label: "Gewebe *",
+                value: _gewebe,
+                items: const ["Standard", "Pollenschutz", "PetScreen"],
+                onChanged: (v) => setState(() => _gewebe = v),
+              ),
+
+              ml(_notizen, "Notizen (optional)"),
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: save,
+                icon: const Icon(Icons.check),
+                label: const Text("Speichern"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+// =======================================================
+// DACHFENSTER – LISTE + FORMULAR + DETAILS
+// =======================================================
+
+class DachfensterListScreen extends StatefulWidget {
+  final String title;
+  final List<DachfensterItem> Function() getItems;
+  final void Function(DachfensterItem item) onAdd;
+
+  const DachfensterListScreen({
+    super.key,
+    required this.title,
+    required this.getItems,
+    required this.onAdd,
+  });
+
+  @override
+  State<DachfensterListScreen> createState() => _DachfensterListScreenState();
+}
+
+class _DachfensterListScreenState extends State<DachfensterListScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.getItems();
+
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final res = await Navigator.push<DachfensterItem?>(
+            context,
+            MaterialPageRoute(builder: (_) => const DachfensterFormScreen()),
+          );
+          if (res != null) setState(() => widget.onAdd(res));
+        },
+        icon: const Icon(Icons.add),
+        label: const Text("Neu"),
+      ),
+      body: items.isEmpty
+          ? const _EmptyState(
+              text: "Noch keine Dachfenster erfasst.\nTippe auf „Neu“.",
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(14),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, i) {
+                final d = items[i];
+                return _ListCard(
+                  title: "Dachfenster ${d.dachfensterNr}",
+                  subtitle:
+                      "${d.hersteller} • ${d.typBezeichnung} • ${d.breiteMm} × ${d.hoeheMm} mm",
+                  onTap: () => _showDetails(context, d),
+                );
+              },
+            ),
+    );
+  }
+
+  void _showDetails(BuildContext context, DachfensterItem d) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Dachfenster ${d.dachfensterNr}",
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 10),
+              _kv("Hersteller", d.hersteller),
+              _kv("Typ", d.typBezeichnung),
+              _kv("Breite", "${d.breiteMm} mm"),
+              _kv("Höhe", "${d.hoeheMm} mm"),
+              _kv("Öffnungsart", d.oeffnungsart),
+              _kv("Anschlag", d.anschlag),
+              _kv("Verglasung", d.verglasung),
+              _kv("Zusatz", d.zusatz.isEmpty ? "-" : d.zusatz),
+              if (d.notizen.trim().isNotEmpty) ...[
+                const SizedBox(height: 10),
+                const Text("Notizen", style: TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                Text(d.notizen),
+              ]
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class DachfensterFormScreen extends StatefulWidget {
+  const DachfensterFormScreen({super.key});
+
+  @override
+  State<DachfensterFormScreen> createState() => _DachfensterFormScreenState();
+}
+
+class _DachfensterFormScreenState extends State<DachfensterFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _nr = TextEditingController();
+  final _typ = TextEditingController();
+  final _breite = TextEditingController();
+  final _hoehe = TextEditingController();
+  final _zusatz = TextEditingController();
+  final _notizen = TextEditingController();
+
+  String _hersteller = "Velux";
+  String _oeffnungsart = "Schwingfenster";
+  String _anschlag = "Links";
+  String _verglasung = "2-fach";
+
+  @override
+  void dispose() {
+    _nr.dispose();
+    _typ.dispose();
+    _breite.dispose();
+    _hoehe.dispose();
+    _zusatz.dispose();
+    _notizen.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget tf(TextEditingController c, String label,
+        {TextInputType keyboard = TextInputType.text}) {
+      final required = label.contains("*");
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: TextFormField(
+          controller: c,
+          keyboardType: keyboard,
+          decoration: InputDecoration(
+            labelText: label,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          validator: (v) {
+            if (!required) return null;
+            if (v == null || v.trim().isEmpty) return "Pflichtfeld";
+            return null;
+          },
+        ),
+      );
+    }
+
+    Widget dd({
+      required String label,
+      required String value,
+      required List<String> items,
+      required ValueChanged<String> onChanged,
+    }) =>
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) => onChanged(v ?? value),
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    Widget ml(TextEditingController c, String label) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: TextFormField(
+            controller: c,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    void save() {
+      if (!_formKey.currentState!.validate()) return;
+
+      final item = DachfensterItem(
+        dachfensterNr: _nr.text.trim(),
+        hersteller: _hersteller,
+        typBezeichnung: _typ.text.trim(),
+        breiteMm: _breite.text.trim(),
+        hoeheMm: _hoehe.text.trim(),
+        oeffnungsart: _oeffnungsart,
+        anschlag: _anschlag,
+        verglasung: _verglasung,
+        zusatz: _zusatz.text.trim(),
+        notizen: _notizen.text.trim(),
+      );
+
+      Navigator.pop(context, item);
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Neues Dachfenster")),
+      body: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              tf(_nr, "DachfensterNr. *"),
+
+              dd(
+                label: "Hersteller *",
+                value: _hersteller,
+                items: const ["Velux", "Roto", "Fakro", "Sonstige"],
+                onChanged: (v) => setState(() => _hersteller = v),
+              ),
+
+              tf(_typ, "Typ / Bezeichnung * (z.B. GGU MK06)"),
+
+              tf(_breite, "Breite (mm) *", keyboard: TextInputType.number),
+              tf(_hoehe, "Höhe (mm) *", keyboard: TextInputType.number),
+
+              dd(
+                label: "Öffnungsart *",
+                value: _oeffnungsart,
+                items: const ["Schwingfenster", "Klapp-Schwing", "Ausstieg"],
+                onChanged: (v) => setState(() => _oeffnungsart = v),
+              ),
+
+              dd(
+                label: "Anschlag *",
+                value: _anschlag,
+                items: const ["Links", "Rechts"],
+                onChanged: (v) => setState(() => _anschlag = v),
+              ),
+
+              dd(
+                label: "Verglasung *",
+                value: _verglasung,
+                items: const ["2-fach", "3-fach"],
+                onChanged: (v) => setState(() => _verglasung = v),
+              ),
+
+              tf(_zusatz, "Zusatz (optional)"),
               ml(_notizen, "Notizen (optional)"),
 
               const SizedBox(height: 14),
