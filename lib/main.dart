@@ -1,6 +1,17 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:flutter/material.dart';
 
-void main() => runApp(const FensterProApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: 'https://DEINPROJEKT.supabase.co',
+    anonKey: 'DEIN_ANON_KEY',
+  );
+
+  runApp(const FensterProApp());
+}
 
 class FensterProApp extends StatelessWidget {
   const FensterProApp({super.key});
