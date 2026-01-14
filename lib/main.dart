@@ -2481,3 +2481,471 @@ class _DachfensterFormScreenState extends State<DachfensterFormScreen> {
     );
   }
 }
+// =======================================================
+// SUPABASE AUTH + COMPANY (FIRMA) GATE
+// =======================================================
+
+class SupabaseAuthGate extends StatelessWidget {
+  const SupabaseAuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final client = Supabase.instance.client;
+
+    return StreamBuilder<AuthState>(
+      stream: client.auth.onAuthStateChange,
+      builder: (context, snap) {
+        // initial check
+        final user = client.auth.currentUser;
+
+        if (user == null) {
+          return const SbLoginScreen();
+        }
+
+        return SbCompanyGate(userId: user.id, email: user.email ?? "");
+      },
+    );
+  }
+}
+
+class SbCompanyGate extends StatelessWidget {
+  final String userId;
+  final String email;
+
+  const SbCompanyGate({
+    super.key,
+    required this.userId,
+    required this.email,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final client = Supabase.instance.client;
+
+    return FutureBuilder<String?>(
+      future: _getCompanyId(client, userId),
+      builder: (context, snap) {
+        if (!snap.hasData) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+
+        final companyId = snap.data;
+
+        if (companyId == null || companyId.isEmpty) {
+          return SbCompanyJoinScreen(userId: userId, email: email);
+        }
+
+        // ✅ Ab hier ist der User Mitglied einer Firma
+        // Als Nächstes bauen wir ProjectsCloudScreen.
+        // Für jetzt zeigen wir nur einen Platzhalter.
+        return SbHomePlaceholder(companyId: companyId);
+      },
+    );
+  }
+
+  Future<String?> _getCompanyId(SupabaseClient client, String userId) async {
+    // user_id in members finden
+    final res = await client
+        .from('members')
+        .select('company_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (res == null) return null;
+    return res['company_id'] as String?;
+  }
+}
+
+// Platzhalter Home – wird im nächsten Schritt durch ProjectsCloudScreen ersetzt
+class SbHomePlaceholder extends StatelessWidget {
+  final String companyId;
+  const SbHomePlaceholder({super.key, required this.companyId});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("FensterPro (Cloud)"),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              await Supabase.instance.client.auth.signOut();
+            },
+            icon: const Icon(Icons.logout),
+          )
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Text(
+              "✅ Login + Firma erfolgreich!\n\nAls nächstes: Projekte aus der Cloud laden.",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 14),
+            SelectableText("CompanyId: $companyId"),
+            const SizedBox(height: 8),
+            SelectableText("User: ${user?.email ?? ""}"),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =======================================================
+// LOGIN
+// =======================================================
+
+class SbLoginScreen extends StatefulWidget {
+  const SbLoginScreen({super.key});
+
+  @override
+  State<SbLoginScreen> createState() => _SbLoginScreenState();
+}
+
+class _SbLoginScreenState extends State<SbLoginScreen> {
+  final _email = TextEditingController();
+  final _pw = TextEditingController();
+  bool _loading = false;
+  String? _err;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("FensterPro • Login")),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: _email,
+              decoration: const InputDecoration(labelText: "E-Mail"),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _pw,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: "Passwort"),
+            ),
+            const SizedBox(height: 12),
+            if (_err != null) Text(_err!, style: const TextStyle(color: Color(0xFFD32F2F))),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _loading ? null : _login,
+              child: _loading
+                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator())
+                  : const Text("Login"),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SbRegisterScreen()),
+              ),
+              child: const Text("Noch kein Account? Registrieren"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _login() async {
+    setState(() {
+      _loading = true;
+      _err = null;
+    });
+
+    try {
+      await Supabase.instance.client.auth.signInWithPassword(
+        email: _email.text.trim(),
+        password: _pw.text.trim(),
+      );
+    } catch (e) {
+      setState(() => _err = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+}
+
+// =======================================================
+// REGISTER
+// =======================================================
+
+class SbRegisterScreen extends StatefulWidget {
+  const SbRegisterScreen({super.key});
+
+  @override
+  State<SbRegisterScreen> createState() => _SbRegisterScreenState();
+}
+
+class _SbRegisterScreenState extends State<SbRegisterScreen> {
+  final _email = TextEditingController();
+  final _pw = TextEditingController();
+  bool _loading = false;
+  String? _err;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Registrieren")),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(controller: _email, decoration: const InputDecoration(labelText: "E-Mail")),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _pw,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: "Passwort (min. 6 Zeichen)"),
+            ),
+            const SizedBox(height: 12),
+            if (_err != null) Text(_err!, style: const TextStyle(color: Color(0xFFD32F2F))),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _loading ? null : _register,
+              child: _loading
+                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator())
+                  : const Text("Account erstellen"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _register() async {
+    setState(() {
+      _loading = true;
+      _err = null;
+    });
+
+    try {
+      await Supabase.instance.client.auth.signUp(
+        email: _email.text.trim(),
+        password: _pw.text.trim(),
+      );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      setState(() => _err = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+}
+
+// =======================================================
+// COMPANY JOIN / CREATE
+// =======================================================
+
+class SbCompanyJoinScreen extends StatefulWidget {
+  final String userId;
+  final String email;
+
+  const SbCompanyJoinScreen({
+    super.key,
+    required this.userId,
+    required this.email,
+  });
+
+  @override
+  State<SbCompanyJoinScreen> createState() => _SbCompanyJoinScreenState();
+}
+
+class _SbCompanyJoinScreenState extends State<SbCompanyJoinScreen> {
+  final _code = TextEditingController();
+  bool _loading = false;
+  String? _err;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Firma beitreten"),
+        actions: [
+          IconButton(
+            onPressed: () async => Supabase.instance.client.auth.signOut(),
+            icon: const Icon(Icons.logout),
+          )
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Text(
+              "Gib den Firmen-Code ein (z.B. FP-4K92).",
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _code,
+              decoration: const InputDecoration(labelText: "Firmen-Code"),
+            ),
+            const SizedBox(height: 12),
+            if (_err != null) Text(_err!, style: const TextStyle(color: Color(0xFFD32F2F))),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _loading ? null : _joinCompany,
+              icon: const Icon(Icons.key),
+              label: const Text("Beitreten"),
+            ),
+            const SizedBox(height: 18),
+            TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SbCreateCompanyScreen(userId: widget.userId, email: widget.email),
+                ),
+              ),
+              child: const Text("Neue Firma erstellen (Admin)"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _joinCompany() async {
+    setState(() {
+      _loading = true;
+      _err = null;
+    });
+
+    try {
+      final code = _code.text.trim().toUpperCase();
+      if (code.isEmpty) throw Exception("Code fehlt");
+
+      final client = Supabase.instance.client;
+
+      final company = await client
+          .from('companies')
+          .select('id, code')
+          .eq('code', code)
+          .maybeSingle();
+
+      if (company == null) throw Exception("Code nicht gefunden.");
+
+      final companyId = company['id'] as String;
+
+      // Member anlegen
+      await client.from('members').insert({
+        'company_id': companyId,
+        'user_id': widget.userId,
+        'role': 'user',
+      });
+
+      // 🔁 Gate wird automatisch neu geladen
+    } catch (e) {
+      setState(() => _err = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+}
+
+class SbCreateCompanyScreen extends StatefulWidget {
+  final String userId;
+  final String email;
+
+  const SbCreateCompanyScreen({
+    super.key,
+    required this.userId,
+    required this.email,
+  });
+
+  @override
+  State<SbCreateCompanyScreen> createState() => _SbCreateCompanyScreenState();
+}
+
+class _SbCreateCompanyScreenState extends State<SbCreateCompanyScreen> {
+  final _name = TextEditingController();
+  bool _loading = false;
+  String? _err;
+  String? _createdCode;
+
+  String _genCode() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    final now = DateTime.now().microsecondsSinceEpoch;
+    String out = "FP-";
+    for (int i = 0; i < 4; i++) {
+      out += chars[(now + i * 17) % chars.length];
+    }
+    return out;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Firma erstellen")),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(controller: _name, decoration: const InputDecoration(labelText: "Firmenname")),
+            const SizedBox(height: 12),
+            if (_err != null) Text(_err!, style: const TextStyle(color: Color(0xFFD32F2F))),
+            if (_createdCode != null) ...[
+              const SizedBox(height: 12),
+              SelectableText(
+                "✅ Firmen-Code: $_createdCode",
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 6),
+              const Text("Diesen Code an deine Mitarbeiter weitergeben."),
+            ],
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _loading ? null : _createCompany,
+              child: _loading
+                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator())
+                  : const Text("Firma erstellen"),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createCompany() async {
+    setState(() {
+      _loading = true;
+      _err = null;
+      _createdCode = null;
+    });
+
+    try {
+      final name = _name.text.trim();
+      if (name.isEmpty) throw Exception("Firmenname fehlt");
+
+      final code = _genCode();
+      final client = Supabase.instance.client;
+
+      // company erstellen
+      final inserted = await client.from('companies').insert({
+        'name': name,
+        'code': code,
+      }).select('id').single();
+
+      final companyId = inserted['id'] as String;
+
+      // admin member
+      await client.from('members').insert({
+        'company_id': companyId,
+        'user_id': widget.userId,
+        'role': 'admin',
+      });
+
+      setState(() => _createdCode = code);
+    } catch (e) {
+      setState(() => _err = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+}
