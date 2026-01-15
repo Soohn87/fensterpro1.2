@@ -337,10 +337,10 @@ class _ProjectHomeScreenState extends State<ProjectHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
+     AnimatedBuilder(
       animation: state,
       builder: (context, _) {
-        return Scaffold(
+         Scaffold(
           appBar: AppBar(
             title: const Text('FensterPro – Aufmaß für Bauelemente'),
             centerTitle: true,
@@ -367,7 +367,7 @@ class _ProjectHomeScreenState extends State<ProjectHomeScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, i) {
                     final p = state.projects[i];
-                    return Dismissible(
+                     Dismissible(
                       key: ValueKey(p.id),
                       direction: DismissDirection.endToStart,
                       background: Container(
@@ -430,7 +430,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   }
 
   void _save() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) ;
     final p = Project(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       name: _name.text.trim(),
@@ -444,7 +444,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+     Scaffold(
       appBar: AppBar(title: const Text("Neues Projekt")),
       body: Padding(
         padding: const EdgeInsets.all(14),
@@ -470,7 +470,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
 
   Widget _tf(TextEditingController c, String label) {
     final required = label.contains("*");
-    return Padding(
+     Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextFormField(
         controller: c,
@@ -479,9 +479,9 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         ),
         validator: (v) {
-          if (!required) return null;
-          if (v == null || v.trim().isEmpty) return "Pflichtfeld";
-          return null;
+          if (!required)  null;
+          if (v == null || v.trim().isEmpty)  "Pflichtfeld";
+           null;
         },
       ),
     );
@@ -503,17 +503,17 @@ class ProjectDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
+     AnimatedBuilder(
       animation: state,
       builder: (context, _) {
         final proj = state.projects.firstWhere((p) => p.id == projectId);
 
-        return Scaffold(
+         Scaffold(
           appBar: AppBar(title: Text(proj.name)),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () async {
               final name = await _askRoomName(context);
-              if (name == null) return;
+              if (name == null) ;
 
               state.addRoom(
                 projectId,
@@ -560,7 +560,7 @@ class ProjectDetailScreen extends StatelessWidget {
                           separatorBuilder: (_, __) => const SizedBox(height: 10),
                           itemBuilder: (context, i) {
                             final r = proj.rooms[i];
-                            return _ListCard(
+                             _ListCard(
                               title: r.name,
                               subtitle:
                                   "Fenster: ${r.fenster.length} • Zimmertüren: ${r.tueren.length} • Haustüren: ${r.haustueren.length}",
@@ -590,7 +590,7 @@ class ProjectDetailScreen extends StatelessWidget {
 
   Future<String?> _askRoomName(BuildContext context) async {
     final c = TextEditingController();
-    return showDialog<String>(
+     showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("Raumname"),
@@ -606,7 +606,7 @@ class ProjectDetailScreen extends StatelessWidget {
           FilledButton(
             onPressed: () {
               final v = c.text.trim();
-              if (v.isEmpty) return;
+              if (v.isEmpty) ;
               Navigator.pop(context, v);
             },
             child: const Text("OK"),
@@ -634,13 +634,13 @@ class RoomDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
+     AnimatedBuilder(
       animation: state,
       builder: (context, _) {
         final proj = state.projects.firstWhere((p) => p.id == projectId);
         final r = proj.rooms.firstWhere((rr) => rr.id == roomId);
 
-        return Scaffold(
+         Scaffold(
           appBar: AppBar(title: Text(r.name)),
           body: Padding(
             padding: const EdgeInsets.all(14),
@@ -797,7 +797,7 @@ class _FensterListScreenState extends State<FensterListScreen> {
   Widget build(BuildContext context) {
     final items = widget.getItems();
 
-    return Scaffold(
+     Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
@@ -818,7 +818,7 @@ class _FensterListScreenState extends State<FensterListScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, i) {
                 final f = items[i];
-                return _ListCard(
+                 _ListCard(
                   title: "Fenster ${f.fensterNr}",
                   subtitle:
                       "${f.breiteMm} × ${f.hoeheMm} mm • ${f.oeffnungsart} • DIN ${f.anschlagsrichtung}",
@@ -904,7 +904,7 @@ class _FensterFormScreenState extends State<FensterFormScreen> {
   }
 
   void _save() {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) ;
 
     final item = FensterItem(
       fensterNr: _fensterNr.text.trim(),
@@ -929,7 +929,7 @@ class _FensterFormScreenState extends State<FensterFormScreen> {
     Widget tf(TextEditingController c, String label,
         {TextInputType keyboard = TextInputType.text}) {
       final required = label.contains("*");
-      return Padding(
+       Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: TextFormField(
           controller: c,
@@ -939,8 +939,8 @@ class _FensterFormScreenState extends State<FensterFormScreen> {
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           ),
           validator: (v) {
-            if (!required) return null;
-            if (v == null || v.trim().isEmpty) return "Pflichtfeld";
+            if (!required)  null;
+            if (v == null || v.trim().isEmpty)  "Pflichtfeld";
             return null;
           },
         ),
@@ -2538,7 +2538,7 @@ class SbCompanyGate extends StatelessWidget {
         // ✅ Ab hier ist der User Mitglied einer Firma
         // Als Nächstes bauen wir ProjectsCloudScreen.
         // Für jetzt zeigen wir nur einen Platzhalter.
-        return SbHomePlaceholder(companyId: companyId);
+        return ProjectsCloudScreen(companyId: companyId);
       },
     );
   }
@@ -2947,5 +2947,210 @@ class _SbCreateCompanyScreenState extends State<SbCreateCompanyScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+}
+// =======================================================
+// SUPABASE CLOUD: PROJECTS + ROOMS
+// =======================================================
+
+class ProjectsCloudScreen extends StatefulWidget {
+  final String companyId;
+  const ProjectsCloudScreen({super.key, required this.companyId});
+
+  @override
+  State<ProjectsCloudScreen> createState() => _ProjectsCloudScreenState();
+}
+
+class _ProjectsCloudScreenState extends State<ProjectsCloudScreen> {
+  final _client = Supabase.instance.client;
+
+  bool _loading = true;
+  String? _err;
+  List<Map<String, dynamic>> _projects = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _err = null;
+    });
+
+    try {
+      final res = await _client
+          .from('projects')
+          .select('id, name, customer, address, created_at')
+          .eq('company_id', widget.companyId)
+          .order('created_at', ascending: false);
+
+      _projects = List<Map<String, dynamic>>.from(res);
+    } catch (e) {
+      _err = e.toString();
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _addProject() async {
+    final nameC = TextEditingController();
+    final customerC = TextEditingController();
+    final addressC = TextEditingController();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Neues Projekt"),
+        content: SingleChildScrollView(
+          child: Column(
+            children: [
+              TextField(controller: nameC, decoration: const InputDecoration(labelText: "Projektname *")),
+              const SizedBox(height: 8),
+              TextField(controller: customerC, decoration: const InputDecoration(labelText: "Kunde")),
+              const SizedBox(height: 8),
+              TextField(controller: addressC, decoration: const InputDecoration(labelText: "Adresse")),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Abbrechen")),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text("Speichern")),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    final name = nameC.text.trim();
+    if (name.isEmpty) return;
+
+    try {
+      await _client.from('projects').insert({
+        'company_id': widget.companyId,
+        'name': name,
+        'customer': customerC.text.trim(),
+        'address': addressC.text.trim(),
+      });
+
+      await _load();
+    } catch (e) {
+      _toast(context, "Fehler: $e");
+    }
+  }
+
+  Future<void> _deleteProject(String id) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Projekt löschen?"),
+        content: const Text("Willst du das Projekt wirklich löschen?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Abbrechen")),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD32F2F)),
+            child: const Text("Löschen"),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    try {
+      await _client.from('projects').delete().eq('id', id);
+      await _load();
+    } catch (e) {
+      _toast(context, "Fehler: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = _client.auth.currentUser;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("FensterPro • Projekte (Cloud)"),
+        actions: [
+          IconButton(
+            onPressed: _load,
+            icon: const Icon(Icons.refresh),
+          ),
+          IconButton(
+            onPressed: () async => _client.auth.signOut(),
+            icon: const Icon(Icons.logout),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _addProject,
+        icon: const Icon(Icons.add),
+        label: const Text("Neues Projekt"),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _InfoBox(
+              lines: [
+                "Team Cloud aktiv ✅",
+                "User: ${user?.email ?? "—"}",
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            if (_err != null) ...[
+              Text(_err!, style: const TextStyle(color: Color(0xFFD32F2F))),
+              const SizedBox(height: 12),
+            ],
+
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _projects.isEmpty
+                      ? const _EmptyState(text: "Noch keine Projekte.\nTippe auf „Neues Projekt“. ")
+                      : ListView.separated(
+                          itemCount: _projects.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, i) {
+                            final p = _projects[i];
+                            final pid = p['id'] as String;
+                            final name = (p['name'] ?? '') as String;
+                            final customer = (p['customer'] ?? '') as String;
+                            final address = (p['address'] ?? '') as String;
+
+                            return _ListCard(
+                              title: name,
+                              subtitle: [
+                                if (customer.isNotEmpty) customer,
+                                if (address.isNotEmpty) address,
+                              ].join(" • "),
+                              trailing: IconButton(
+                                onPressed: () => _deleteProject(pid),
+                                icon: const Icon(Icons.delete),
+                              ),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => RoomsCloudScreen(
+                                    companyId: widget.companyId,
+                                    projectId: pid,
+                                    projectName: name,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
