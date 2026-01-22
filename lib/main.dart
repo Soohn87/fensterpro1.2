@@ -713,45 +713,35 @@ class RoomDetailScreen extends StatelessWidget {
     ),
   ),
 ),
+_BigButton(
+  icon: Icons.bug_report,
+  title: "Fliegengitter",
+  subtitle: "Cloud • Erfassen / ansehen",
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => FliegengitterCloudListScreen(
+        roomId: roomId,
+        roomName: roomName,
+      ),
+    ),
+  ),
+),
+_BigButton(
+  icon: Icons.roofing,
+  title: "Dachfenster",
+  subtitle: "Cloud • Erfassen / ansehen",
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => DachfensterCloudListScreen(
+        roomId: roomId,
+        roomName: roomName,
+      ),
+    ),
+  ),
+),
 
-                          ),
-                        ),
-                      ),
-                    ),
-                    _BigButton(
-                      icon: Icons.bug_report,
-                      title: "Fliegengitter",
-                      subtitle: "Erfassen / ansehen",
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => FliegengitterListScreen(
-                            title: "Fliegengitter • ${r.name}",
-                            getItems: () => r.fliegengitter,
-                            onAdd: (item) =>
-                                state.addFliegengitter(projectId, roomId, item),
-                          ),
-                        ),
-                      ),
-                    ),
-                    _BigButton(
-                      icon: Icons.roofing,
-                      title: "Dachfenster",
-                      subtitle: "Erfassen / ansehen",
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DachfensterListScreen(
-                            title: "Dachfenster • ${r.name}",
-                            getItems: () => r.dachfenster,
-                            onAdd: (item) =>
-                                state.addDachfenster(projectId, roomId, item),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 14),
                 _InfoBox(
                   lines: [
@@ -4662,6 +4652,759 @@ class _RolladenCloudFormScreenState extends State<RolladenCloudFormScreen> {
                 value: _antrieb,
                 items: const ["Gurt", "Kurbel", "Motor"],
                 onChanged: (v) => setState(() => _antrieb = v),
+              ),
+
+              SwitchListTile(
+                value: _barrierefrei,
+                onChanged: (v) => setState(() => _barrierefrei = v),
+                title: const Text("Barrierefrei"),
+              ),
+
+              ml(_notizen, "Notizen (optional)"),
+
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: save,
+                icon: const Icon(Icons.check),
+                label: const Text("Speichern"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+// =======================================================
+// SUPABASE CLOUD: FLIEGENGITTER
+// items: type="fliegengitter", data=json
+// =======================================================
+
+class FliegengitterCloudListScreen extends StatefulWidget {
+  final String roomId;
+  final String roomName;
+
+  const FliegengitterCloudListScreen({
+    super.key,
+    required this.roomId,
+    required this.roomName,
+  });
+
+  @override
+  State<FliegengitterCloudListScreen> createState() =>
+      _FliegengitterCloudListScreenState();
+}
+
+class _FliegengitterCloudListScreenState
+    extends State<FliegengitterCloudListScreen> {
+  final _client = Supabase.instance.client;
+
+  bool _loading = true;
+  String? _err;
+  List<Map<String, dynamic>> _items = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _err = null;
+    });
+
+    try {
+      final res = await _client
+          .from('items')
+          .select('id, type, data, created_at')
+          .eq('room_id', widget.roomId)
+          .eq('type', 'fliegengitter')
+          .order('created_at', ascending: false);
+
+      _items = List<Map<String, dynamic>>.from(res);
+    } catch (e) {
+      _err = e.toString();
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _add() async {
+    final res = await Navigator.push<Map<String, dynamic>?>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const FliegengitterCloudFormScreen(),
+      ),
+    );
+
+    if (res == null) return;
+
+    try {
+      await _client.from('items').insert({
+        'room_id': widget.roomId,
+        'type': 'fliegengitter',
+        'data': res,
+      });
+
+      await _load();
+    } catch (e) {
+      _toast(context, "Fehler: $e");
+    }
+  }
+
+  Future<void> _delete(String id) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Fliegengitter löschen?"),
+        content: const Text("Willst du dieses Fliegengitter wirklich löschen?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Abbrechen"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD32F2F)),
+            child: const Text("Löschen"),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    try {
+      await _client.from('items').delete().eq('id', id);
+      await _load();
+    } catch (e) {
+      _toast(context, "Fehler: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Fliegengitter • ${widget.roomName} (Cloud)"),
+        actions: [
+          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _add,
+        icon: const Icon(Icons.add),
+        label: const Text("Neu"),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_err != null) ...[
+              Text(_err!, style: const TextStyle(color: Color(0xFFD32F2F))),
+              const SizedBox(height: 12),
+            ],
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _items.isEmpty
+                      ? const _EmptyState(
+                          text: "Noch keine Fliegengitter.\nTippe auf „Neu“.",
+                        )
+                      : ListView.separated(
+                          itemCount: _items.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, i) {
+                            final row = _items[i];
+                            final id = row['id'] as String;
+                            final data = (row['data'] as Map).cast<String, dynamic>();
+
+                            final nr = (data['gitterNr'] ?? '') as String;
+                            final b = (data['breiteMm'] ?? '') as String;
+                            final h = (data['hoeheMm'] ?? '') as String;
+                            final typ = (data['typ'] ?? '') as String;
+
+                            return _ListCard(
+                              title: "Fliegengitter $nr",
+                              subtitle: "$b × $h mm • $typ",
+                              trailing: IconButton(
+                                onPressed: () => _delete(id),
+                                icon: const Icon(Icons.delete),
+                              ),
+                              onTap: () => _showDetails(context, data),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDetails(BuildContext context, Map<String, dynamic> d) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Fliegengitter ${d['gitterNr'] ?? ''}",
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 10),
+              _kv("Breite", "${d['breiteMm'] ?? ''} mm"),
+              _kv("Höhe", "${d['hoeheMm'] ?? ''} mm"),
+              _kv("Typ", "${d['typ'] ?? ''}"),
+              _kv("Rahmenfarbe", "${d['rahmenfarbe'] ?? ''}"),
+              _kv("Gewebe", "${d['gewebe'] ?? ''}"),
+              _kv("Montage", "${d['montage'] ?? ''}"),
+              _kv("Barrierefrei", "${d['barrierefrei'] ?? ''}"),
+              if (((d['notizen'] ?? '') as String).trim().isNotEmpty) ...[
+                const SizedBox(height: 10),
+                const Text("Notizen", style: TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text("${d['notizen']}"),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class FliegengitterCloudFormScreen extends StatefulWidget {
+  const FliegengitterCloudFormScreen({super.key});
+
+  @override
+  State<FliegengitterCloudFormScreen> createState() =>
+      _FliegengitterCloudFormScreenState();
+}
+
+class _FliegengitterCloudFormScreenState
+    extends State<FliegengitterCloudFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _nr = TextEditingController();
+  final _breite = TextEditingController();
+  final _hoehe = TextEditingController();
+  final _rahmenfarbe = TextEditingController();
+  final _notizen = TextEditingController();
+
+  String _typ = "Spannrahmen";
+  String _gewebe = "Standard";
+  String _montage = "Einclip";
+  bool _barrierefrei = false;
+
+  @override
+  void dispose() {
+    _nr.dispose();
+    _breite.dispose();
+    _hoehe.dispose();
+    _rahmenfarbe.dispose();
+    _notizen.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget tf(TextEditingController c, String label,
+        {TextInputType keyboard = TextInputType.text}) {
+      final required = label.contains("*");
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: TextFormField(
+          controller: c,
+          keyboardType: keyboard,
+          decoration: InputDecoration(
+            labelText: label,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          validator: (v) {
+            if (!required) return null;
+            if (v == null || v.trim().isEmpty) return "Pflichtfeld";
+            return null;
+          },
+        ),
+      );
+    }
+
+    Widget dd({
+      required String label,
+      required String value,
+      required List<String> items,
+      required ValueChanged<String> onChanged,
+    }) =>
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) => onChanged(v ?? value),
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    Widget ml(TextEditingController c, String label) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: TextFormField(
+            controller: c,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    void save() {
+      if (!_formKey.currentState!.validate()) return;
+
+      final data = <String, dynamic>{
+        "gitterNr": _nr.text.trim(),
+        "breiteMm": _breite.text.trim(),
+        "hoeheMm": _hoehe.text.trim(),
+        "typ": _typ,
+        "rahmenfarbe": _rahmenfarbe.text.trim(),
+        "gewebe": _gewebe,
+        "montage": _montage,
+        "barrierefrei": _barrierefrei ? "Ja" : "Nein",
+        "notizen": _notizen.text.trim(),
+      };
+
+      Navigator.pop(context, data);
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Neues Fliegengitter (Cloud)")),
+      body: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              tf(_nr, "FliegengitterNr. *"),
+              tf(_breite, "Breite (mm) *", keyboard: TextInputType.number),
+              tf(_hoehe, "Höhe (mm) *", keyboard: TextInputType.number),
+
+              dd(
+                label: "Typ *",
+                value: _typ,
+                items: const ["Spannrahmen", "Drehtür", "Schiebetür", "Rollo"],
+                onChanged: (v) => setState(() => _typ = v),
+              ),
+
+              tf(_rahmenfarbe, "Rahmenfarbe *"),
+
+              dd(
+                label: "Gewebe *",
+                value: _gewebe,
+                items: const ["Standard", "Pollenschutz", "Edelstahl", "Haustier"],
+                onChanged: (v) => setState(() => _gewebe = v),
+              ),
+
+              dd(
+                label: "Montage *",
+                value: _montage,
+                items: const ["Einclip", "Schrauben", "Magnet"],
+                onChanged: (v) => setState(() => _montage = v),
+              ),
+
+              SwitchListTile(
+                value: _barrierefrei,
+                onChanged: (v) => setState(() => _barrierefrei = v),
+                title: const Text("Barrierefrei"),
+              ),
+
+              ml(_notizen, "Notizen (optional)"),
+
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: save,
+                icon: const Icon(Icons.check),
+                label: const Text("Speichern"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+// =======================================================
+// SUPABASE CLOUD: DACHFENSTER
+// items: type="dachfenster", data=json
+// =======================================================
+
+class DachfensterCloudListScreen extends StatefulWidget {
+  final String roomId;
+  final String roomName;
+
+  const DachfensterCloudListScreen({
+    super.key,
+    required this.roomId,
+    required this.roomName,
+  });
+
+  @override
+  State<DachfensterCloudListScreen> createState() =>
+      _DachfensterCloudListScreenState();
+}
+
+class _DachfensterCloudListScreenState extends State<DachfensterCloudListScreen> {
+  final _client = Supabase.instance.client;
+
+  bool _loading = true;
+  String? _err;
+  List<Map<String, dynamic>> _items = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _err = null;
+    });
+
+    try {
+      final res = await _client
+          .from('items')
+          .select('id, type, data, created_at')
+          .eq('room_id', widget.roomId)
+          .eq('type', 'dachfenster')
+          .order('created_at', ascending: false);
+
+      _items = List<Map<String, dynamic>>.from(res);
+    } catch (e) {
+      _err = e.toString();
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _add() async {
+    final res = await Navigator.push<Map<String, dynamic>?>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const DachfensterCloudFormScreen(),
+      ),
+    );
+
+    if (res == null) return;
+
+    try {
+      await _client.from('items').insert({
+        'room_id': widget.roomId,
+        'type': 'dachfenster',
+        'data': res,
+      });
+
+      await _load();
+    } catch (e) {
+      _toast(context, "Fehler: $e");
+    }
+  }
+
+  Future<void> _delete(String id) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Dachfenster löschen?"),
+        content: const Text("Willst du dieses Dachfenster wirklich löschen?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Abbrechen"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD32F2F)),
+            child: const Text("Löschen"),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    try {
+      await _client.from('items').delete().eq('id', id);
+      await _load();
+    } catch (e) {
+      _toast(context, "Fehler: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Dachfenster • ${widget.roomName} (Cloud)"),
+        actions: [
+          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _add,
+        icon: const Icon(Icons.add),
+        label: const Text("Neu"),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_err != null) ...[
+              Text(_err!, style: const TextStyle(color: Color(0xFFD32F2F))),
+              const SizedBox(height: 12),
+            ],
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _items.isEmpty
+                      ? const _EmptyState(
+                          text: "Noch keine Dachfenster.\nTippe auf „Neu“.",
+                        )
+                      : ListView.separated(
+                          itemCount: _items.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, i) {
+                            final row = _items[i];
+                            final id = row['id'] as String;
+                            final data = (row['data'] as Map).cast<String, dynamic>();
+
+                            final nr = (data['dachfensterNr'] ?? '') as String;
+                            final b = (data['breiteMm'] ?? '') as String;
+                            final h = (data['hoeheMm'] ?? '') as String;
+                            final hersteller = (data['hersteller'] ?? '') as String;
+
+                            return _ListCard(
+                              title: "Dachfenster $nr",
+                              subtitle: "$b × $h mm • $hersteller",
+                              trailing: IconButton(
+                                onPressed: () => _delete(id),
+                                icon: const Icon(Icons.delete),
+                              ),
+                              onTap: () => _showDetails(context, data),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDetails(BuildContext context, Map<String, dynamic> d) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Dachfenster ${d['dachfensterNr'] ?? ''}",
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 10),
+              _kv("Breite", "${d['breiteMm'] ?? ''} mm"),
+              _kv("Höhe", "${d['hoeheMm'] ?? ''} mm"),
+              _kv("Hersteller", "${d['hersteller'] ?? ''}"),
+              _kv("Typ", "${d['typ'] ?? ''}"),
+              _kv("Öffnungsart", "${d['oeffnungsart'] ?? ''}"),
+              _kv("Verglasung", "${d['verglasung'] ?? ''}"),
+              _kv("Farbe außen", "${d['farbeAussen'] ?? ''}"),
+              _kv("Farbe innen", "${d['farbeInnen'] ?? ''}"),
+              _kv("Sicherheitsstufe", "${d['sicherheitsstufe'] ?? ''}"),
+              _kv("Barrierefrei", "${d['barrierefrei'] ?? ''}"),
+              if (((d['notizen'] ?? '') as String).trim().isNotEmpty) ...[
+                const SizedBox(height: 10),
+                const Text("Notizen", style: TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text("${d['notizen']}"),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class DachfensterCloudFormScreen extends StatefulWidget {
+  const DachfensterCloudFormScreen({super.key});
+
+  @override
+  State<DachfensterCloudFormScreen> createState() =>
+      _DachfensterCloudFormScreenState();
+}
+
+class _DachfensterCloudFormScreenState extends State<DachfensterCloudFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _nr = TextEditingController();
+  final _breite = TextEditingController();
+  final _hoehe = TextEditingController();
+  final _hersteller = TextEditingController();
+  final _farbeAussen = TextEditingController();
+  final _farbeInnen = TextEditingController();
+  final _notizen = TextEditingController();
+
+  String _typ = "Schwingfenster";
+  String _oeffnungsart = "Manuell";
+  String _verglasung = "2-fach";
+  String _sicherheit = "Standard";
+  bool _barrierefrei = false;
+
+  @override
+  void dispose() {
+    _nr.dispose();
+    _breite.dispose();
+    _hoehe.dispose();
+    _hersteller.dispose();
+    _farbeAussen.dispose();
+    _farbeInnen.dispose();
+    _notizen.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget tf(TextEditingController c, String label,
+        {TextInputType keyboard = TextInputType.text}) {
+      final required = label.contains("*");
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: TextFormField(
+          controller: c,
+          keyboardType: keyboard,
+          decoration: InputDecoration(
+            labelText: label,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          validator: (v) {
+            if (!required) return null;
+            if (v == null || v.trim().isEmpty) return "Pflichtfeld";
+            return null;
+          },
+        ),
+      );
+    }
+
+    Widget dd({
+      required String label,
+      required String value,
+      required List<String> items,
+      required ValueChanged<String> onChanged,
+    }) =>
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) => onChanged(v ?? value),
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    Widget ml(TextEditingController c, String label) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: TextFormField(
+            controller: c,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    void save() {
+      if (!_formKey.currentState!.validate()) return;
+
+      final data = <String, dynamic>{
+        "dachfensterNr": _nr.text.trim(),
+        "breiteMm": _breite.text.trim(),
+        "hoeheMm": _hoehe.text.trim(),
+        "hersteller": _hersteller.text.trim(),
+        "typ": _typ,
+        "oeffnungsart": _oeffnungsart,
+        "verglasung": _verglasung,
+        "farbeAussen": _farbeAussen.text.trim(),
+        "farbeInnen": _farbeInnen.text.trim(),
+        "sicherheitsstufe": _sicherheit,
+        "barrierefrei": _barrierefrei ? "Ja" : "Nein",
+        "notizen": _notizen.text.trim(),
+      };
+
+      Navigator.pop(context, data);
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Neues Dachfenster (Cloud)")),
+      body: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              tf(_nr, "DachfensterNr. *"),
+              tf(_breite, "Breite (mm) *", keyboard: TextInputType.number),
+              tf(_hoehe, "Höhe (mm) *", keyboard: TextInputType.number),
+
+              tf(_hersteller, "Hersteller *"),
+
+              dd(
+                label: "Typ *",
+                value: _typ,
+                items: const ["Schwingfenster", "Klapp-Schwing", "Ausstieg", "Lichtband"],
+                onChanged: (v) => setState(() => _typ = v),
+              ),
+
+              dd(
+                label: "Öffnungsart *",
+                value: _oeffnungsart,
+                items: const ["Manuell", "Elektrisch", "Solar"],
+                onChanged: (v) => setState(() => _oeffnungsart = v),
+              ),
+
+              dd(
+                label: "Verglasung *",
+                value: _verglasung,
+                items: const ["2-fach", "3-fach", "Sicherheitsglas"],
+                onChanged: (v) => setState(() => _verglasung = v),
+              ),
+
+              tf(_farbeAussen, "Farbe außen *"),
+              tf(_farbeInnen, "Farbe innen *"),
+
+              dd(
+                label: "Sicherheitsstufe *",
+                value: _sicherheit,
+                items: const ["Standard", "RC1", "RC2"],
+                onChanged: (v) => setState(() => _sicherheit = v),
               ),
 
               SwitchListTile(
