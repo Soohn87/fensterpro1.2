@@ -337,10 +337,10 @@ class _ProjectHomeScreenState extends State<ProjectHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-     AnimatedBuilder(
+    return AnimatedBuilder(
       animation: state,
       builder: (context, _) {
-         Scaffold(
+        return Scaffold(
           appBar: AppBar(
             title: const Text('FensterPro – Aufmaß für Bauelemente'),
             centerTitle: true,
@@ -358,8 +358,7 @@ class _ProjectHomeScreenState extends State<ProjectHomeScreen> {
           ),
           body: state.projects.isEmpty
               ? const _EmptyState(
-                  text:
-                      "Noch keine Projekte.\nTippe auf „Neues Projekt“, um zu starten.",
+                  text: "Noch keine Projekte.\nTippe auf „Neues Projekt“, um zu starten.",
                 )
               : ListView.separated(
                   padding: const EdgeInsets.all(14),
@@ -367,7 +366,7 @@ class _ProjectHomeScreenState extends State<ProjectHomeScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, i) {
                     final p = state.projects[i];
-                     Dismissible(
+                    return Dismissible(
                       key: ValueKey(p.id),
                       direction: DismissDirection.endToStart,
                       background: Container(
@@ -430,7 +429,8 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
   }
 
   void _save() {
-    if (!_formKey.currentState!.validate()) ;
+    if (!_formKey.currentState!.validate()) return;
+
     final p = Project(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       name: _name.text.trim(),
@@ -439,12 +439,13 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
       createdAt: DateTime.now(),
       rooms: [],
     );
+
     Navigator.pop(context, p);
   }
 
   @override
   Widget build(BuildContext context) {
-     Scaffold(
+    return Scaffold(
       appBar: AppBar(title: const Text("Neues Projekt")),
       body: Padding(
         padding: const EdgeInsets.all(14),
@@ -470,7 +471,8 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
 
   Widget _tf(TextEditingController c, String label) {
     final required = label.contains("*");
-     Padding(
+
+    return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextFormField(
         controller: c,
@@ -479,14 +481,15 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         ),
         validator: (v) {
-          if (!required)  null;
-          if (v == null || v.trim().isEmpty)  "Pflichtfeld";
-           null;
+          if (!required) return null;
+          if (v == null || v.trim().isEmpty) return "Pflichtfeld";
+          return null;
         },
       ),
     );
   }
 }
+
 
 /// ===============================
 /// Project Detail (Rooms)
@@ -503,17 +506,17 @@ class ProjectDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-     AnimatedBuilder(
+    return AnimatedBuilder(
       animation: state,
       builder: (context, _) {
         final proj = state.projects.firstWhere((p) => p.id == projectId);
 
-         Scaffold(
+        return Scaffold(
           appBar: AppBar(title: Text(proj.name)),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () async {
               final name = await _askRoomName(context);
-              if (name == null) ;
+              if (name == null) return;
 
               state.addRoom(
                 projectId,
@@ -523,70 +526,36 @@ class ProjectDetailScreen extends StatelessWidget {
                   fenster: [],
                   tueren: [],
                   haustueren: [],
-                  rollaeden: [],
-                  fliegengitter: [],
-                  dachfenster: [],
                 ),
               );
             },
             icon: const Icon(Icons.add),
             label: const Text("Raum hinzufügen"),
           ),
-          body: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _InfoBox(
-                  lines: [
-                    "Kunde: ${proj.customer.isEmpty ? "—" : proj.customer}",
-                    "Adresse: ${proj.address.isEmpty ? "—" : proj.address}",
-                    "Erstellt: ${_fmtDate(proj.createdAt)}",
-                  ],
+          body: proj.rooms.isEmpty
+              ? const _EmptyState(text: "Noch keine Räume.\nTippe auf „Raum hinzufügen“. ")
+              : ListView.separated(
+                  padding: const EdgeInsets.all(14),
+                  itemCount: proj.rooms.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, i) {
+                    final r = proj.rooms[i];
+                    return _ListCard(
+                      title: r.name,
+                      subtitle: "Fenster: ${r.fenster.length}",
+                      onTap: () {
+                        // hier war früher dein Local RoomDetail
+                        // (wenn du komplett cloud gehst, wird dieser lokale Screen eh nicht mehr benutzt)
+                      },
+                    );
+                  },
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  "Räume",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: proj.rooms.isEmpty
-                      ? const _EmptyState(
-                          text: "Noch keine Räume.\nTippe auf „Raum hinzufügen“.",
-                        )
-                      : ListView.separated(
-                          itemCount: proj.rooms.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
-                          itemBuilder: (context, i) {
-                            final r = proj.rooms[i];
-                             _ListCard(
-                              title: r.name,
-                              subtitle:
-                                  "Fenster: ${r.fenster.length} • Zimmertüren: ${r.tueren.length} • Haustüren: ${r.haustueren.length}",
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => RoomDetailScreen(
-                                      state: state,
-                                      projectId: projectId,
-                                      roomId: r.id,
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
-          ),
         );
       },
     );
   }
+}
+
 
   Future<String?> _askRoomName(BuildContext context) async {
     final c = TextEditingController();
