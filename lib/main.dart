@@ -699,18 +699,21 @@ class RoomDetailScreen extends StatelessWidget {
   ),
 ),
 
-                    _BigButton(
-                      icon: Icons.blinds,
-                      title: "Rollladen",
-                      subtitle: "Erfassen / ansehen",
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => RolladenListScreen(
-                            title: "Rollladen • ${r.name}",
-                            getItems: () => r.rollaeden,
-                            onAdd: (item) =>
-                                state.addRolladen(projectId, roomId, item),
+                   _BigButton(
+  icon: Icons.blinds,
+  title: "Rollladen",
+  subtitle: "Cloud • Erfassen / ansehen",
+  onTap: () => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => RolladenCloudListScreen(
+        roomId: roomId,
+        roomName: roomName,
+      ),
+    ),
+  ),
+),
+
                           ),
                         ),
                       ),
@@ -4290,6 +4293,375 @@ class _HaustuerCloudFormScreenState extends State<HaustuerCloudFormScreen> {
                 value: _schloss,
                 items: const ["Standard", "Mehrfachverriegelung", "Elektrisch"],
                 onChanged: (v) => setState(() => _schloss = v),
+              ),
+
+              SwitchListTile(
+                value: _barrierefrei,
+                onChanged: (v) => setState(() => _barrierefrei = v),
+                title: const Text("Barrierefrei"),
+              ),
+
+              ml(_notizen, "Notizen (optional)"),
+
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: save,
+                icon: const Icon(Icons.check),
+                label: const Text("Speichern"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+// =======================================================
+// SUPABASE CLOUD: ROLLLADEN
+// items: type="rolladen", data=json
+// =======================================================
+
+class RolladenCloudListScreen extends StatefulWidget {
+  final String roomId;
+  final String roomName;
+
+  const RolladenCloudListScreen({
+    super.key,
+    required this.roomId,
+    required this.roomName,
+  });
+
+  @override
+  State<RolladenCloudListScreen> createState() => _RolladenCloudListScreenState();
+}
+
+class _RolladenCloudListScreenState extends State<RolladenCloudListScreen> {
+  final _client = Supabase.instance.client;
+
+  bool _loading = true;
+  String? _err;
+  List<Map<String, dynamic>> _items = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _err = null;
+    });
+
+    try {
+      final res = await _client
+          .from('items')
+          .select('id, type, data, created_at')
+          .eq('room_id', widget.roomId)
+          .eq('type', 'rolladen')
+          .order('created_at', ascending: false);
+
+      _items = List<Map<String, dynamic>>.from(res);
+    } catch (e) {
+      _err = e.toString();
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _add() async {
+    final res = await Navigator.push<Map<String, dynamic>?>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const RolladenCloudFormScreen(),
+      ),
+    );
+
+    if (res == null) return;
+
+    try {
+      await _client.from('items').insert({
+        'room_id': widget.roomId,
+        'type': 'rolladen',
+        'data': res,
+      });
+
+      await _load();
+    } catch (e) {
+      _toast(context, "Fehler: $e");
+    }
+  }
+
+  Future<void> _delete(String id) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Rollladen löschen?"),
+        content: const Text("Willst du diesen Rollladen wirklich löschen?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Abbrechen"),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD32F2F)),
+            child: const Text("Löschen"),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    try {
+      await _client.from('items').delete().eq('id', id);
+      await _load();
+    } catch (e) {
+      _toast(context, "Fehler: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Rollladen • ${widget.roomName} (Cloud)"),
+        actions: [
+          IconButton(onPressed: _load, icon: const Icon(Icons.refresh)),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _add,
+        icon: const Icon(Icons.add),
+        label: const Text("Neu"),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_err != null) ...[
+              Text(_err!, style: const TextStyle(color: Color(0xFFD32F2F))),
+              const SizedBox(height: 12),
+            ],
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _items.isEmpty
+                      ? const _EmptyState(
+                          text: "Noch keine Rollläden.\nTippe auf „Neu“.",
+                        )
+                      : ListView.separated(
+                          itemCount: _items.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, i) {
+                            final row = _items[i];
+                            final id = row['id'] as String;
+                            final data = (row['data'] as Map).cast<String, dynamic>();
+
+                            final nr = (data['rolladenNr'] ?? '') as String;
+                            final b = (data['breiteMm'] ?? '') as String;
+                            final h = (data['hoeheMm'] ?? '') as String;
+                            final art = (data['kastenart'] ?? '') as String;
+
+                            return _ListCard(
+                              title: "Rollladen $nr",
+                              subtitle: "$b × $h mm • $art",
+                              trailing: IconButton(
+                                onPressed: () => _delete(id),
+                                icon: const Icon(Icons.delete),
+                              ),
+                              onTap: () => _showDetails(context, data),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDetails(BuildContext context, Map<String, dynamic> d) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Rollladen ${d['rolladenNr'] ?? ''}",
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 10),
+              _kv("Breite", "${d['breiteMm'] ?? ''} mm"),
+              _kv("Höhe", "${d['hoeheMm'] ?? ''} mm"),
+              _kv("Kastenart", "${d['kastenart'] ?? ''}"),
+              _kv("Kastenhöhe", "${d['kastenhoeheMm'] ?? ''} mm"),
+              _kv("Panzerprofil", "${d['panzerprofil'] ?? ''}"),
+              _kv("Farbe", "${d['farbe'] ?? ''}"),
+              _kv("Antrieb", "${d['antrieb'] ?? ''}"),
+              _kv("Barrierefrei", "${d['barrierefrei'] ?? ''}"),
+              if (((d['notizen'] ?? '') as String).trim().isNotEmpty) ...[
+                const SizedBox(height: 10),
+                const Text("Notizen", style: TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text("${d['notizen']}"),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class RolladenCloudFormScreen extends StatefulWidget {
+  const RolladenCloudFormScreen({super.key});
+
+  @override
+  State<RolladenCloudFormScreen> createState() => _RolladenCloudFormScreenState();
+}
+
+class _RolladenCloudFormScreenState extends State<RolladenCloudFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _nr = TextEditingController();
+  final _breite = TextEditingController();
+  final _hoehe = TextEditingController();
+  final _kastenhoehe = TextEditingController();
+  final _farbe = TextEditingController();
+  final _notizen = TextEditingController();
+
+  String _kastenart = "Aufsatzkasten";
+  String _panzer = "Alu";
+  String _antrieb = "Gurt";
+  bool _barrierefrei = false;
+
+  @override
+  void dispose() {
+    _nr.dispose();
+    _breite.dispose();
+    _hoehe.dispose();
+    _kastenhoehe.dispose();
+    _farbe.dispose();
+    _notizen.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget tf(TextEditingController c, String label,
+        {TextInputType keyboard = TextInputType.text}) {
+      final required = label.contains("*");
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: TextFormField(
+          controller: c,
+          keyboardType: keyboard,
+          decoration: InputDecoration(
+            labelText: label,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+          validator: (v) {
+            if (!required) return null;
+            if (v == null || v.trim().isEmpty) return "Pflichtfeld";
+            return null;
+          },
+        ),
+      );
+    }
+
+    Widget dd({
+      required String label,
+      required String value,
+      required List<String> items,
+      required ValueChanged<String> onChanged,
+    }) =>
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: DropdownButtonFormField<String>(
+            value: value,
+            items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) => onChanged(v ?? value),
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    Widget ml(TextEditingController c, String label) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: TextFormField(
+            controller: c,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
+
+    void save() {
+      if (!_formKey.currentState!.validate()) return;
+
+      final data = <String, dynamic>{
+        "rolladenNr": _nr.text.trim(),
+        "breiteMm": _breite.text.trim(),
+        "hoeheMm": _hoehe.text.trim(),
+        "kastenart": _kastenart,
+        "kastenhoeheMm": _kastenhoehe.text.trim(),
+        "panzerprofil": _panzer,
+        "farbe": _farbe.text.trim(),
+        "antrieb": _antrieb,
+        "barrierefrei": _barrierefrei ? "Ja" : "Nein",
+        "notizen": _notizen.text.trim(),
+      };
+
+      Navigator.pop(context, data);
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Neuer Rollladen (Cloud)")),
+      body: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              tf(_nr, "RollladenNr. *"),
+              tf(_breite, "Breite (mm) *", keyboard: TextInputType.number),
+              tf(_hoehe, "Höhe (mm) *", keyboard: TextInputType.number),
+
+              dd(
+                label: "Kastenart *",
+                value: _kastenart,
+                items: const ["Aufsatzkasten", "Vorbau", "Einbau"],
+                onChanged: (v) => setState(() => _kastenart = v),
+              ),
+
+              tf(_kastenhoehe, "Kastenhöhe (mm) (optional)", keyboard: TextInputType.number),
+
+              dd(
+                label: "Panzerprofil *",
+                value: _panzer,
+                items: const ["Alu", "PVC", "Stahl"],
+                onChanged: (v) => setState(() => _panzer = v),
+              ),
+
+              tf(_farbe, "Farbe *"),
+
+              dd(
+                label: "Antrieb *",
+                value: _antrieb,
+                items: const ["Gurt", "Kurbel", "Motor"],
+                onChanged: (v) => setState(() => _antrieb = v),
               ),
 
               SwitchListTile(
