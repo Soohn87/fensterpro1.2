@@ -5396,3 +5396,565 @@ class _DachfensterCloudFormScreenState extends State<DachfensterCloudFormScreen>
     );
   }
 }
+import 'dart:typed_data';
+import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/material.dart';
+
+// =======================================================
+// PDF EXPORT PROFI: AUFMASS (Projekt → Räume → Elemente)
+// =======================================================
+
+Future<void> exportProjectPdf({
+  required BuildContext context,
+  required String projectId,
+  required String projectName,
+}) async {
+  final client = Supabase.instance.client;
+
+  try {
+    // ----------------------------
+    // 1) Projekt laden (für Profi-Kopf)
+    // ----------------------------
+    final projRes = await client
+        .from('projects')
+        .select('id, name, customer, address, created_at')
+        .eq('id', projectId)
+        .single();
+
+    final proj = (projRes as Map).cast<String, dynamic>();
+    final customer = (proj['customer'] ?? '') as String;
+    final address = (proj['address'] ?? '') as String;
+
+    // ----------------------------
+    // 2) Räume laden
+    // ----------------------------
+    final roomsRes = await client
+        .from('rooms')
+        .select('id, name, created_at')
+        .eq('project_id', projectId)
+        .order('created_at', ascending: true);
+
+    final rooms = List<Map<String, dynamic>>.from(roomsRes);
+
+    // ----------------------------
+    // 3) Items laden (alle Räume)
+    // ----------------------------
+    final roomIds = rooms.map((r) => r['id'] as String).toList();
+
+    List<Map<String, dynamic>> items = [];
+    if (roomIds.isNotEmpty) {
+      final itemsRes = await client
+          .from('items')
+          .select('id, room_id, type, data, created_at')
+          .inFilter('room_id', roomIds)
+          .order('created_at', ascending: true);
+
+      items = List<Map<String, dynamic>>.from(itemsRes);
+    }
+
+    // group by room
+    final itemsByRoom = <String, List<Map<String, dynamic>>>{};
+    for (final it in items) {
+      final rid = it['room_id'] as String;
+      itemsByRoom.putIfAbsent(rid, () => []);
+      itemsByRoom[rid]!.add(it);
+    }
+
+    // ----------------------------
+    // 4) PDF erstellen
+    // ----------------------------
+    final doc = pw.Document();
+    final now = DateTime.now();
+    final df = DateFormat('dd.MM.yyyy – HH:mm');
+
+    // Farben/Styles
+    const primary = PdfColor.fromInt(0xFF0B6EF3);
+    const dark = PdfColor.fromInt(0xFF1B1B1B);
+    const lightGrey = PdfColor.fromInt(0xFFECEFF3);
+
+    pw.TextStyle h1 =
+        pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: dark);
+    pw.TextStyle h2 =
+        pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: dark);
+    pw.TextStyle small =
+        const pw.TextStyle(fontSize: 9, color: PdfColors.grey700);
+    pw.TextStyle body =
+        const pw.TextStyle(fontSize: 10, color: PdfColors.black);
+
+    String typeLabel(String t) {
+      switch (t) {
+        case 'fenster':
+          return 'Fenster';
+        case 'zimmertuer':
+          return 'Zimmertüren';
+        case 'haustuer':
+          return 'Haustüren';
+        case 'rolladen':
+          return 'Rollladen';
+        case 'fliegengitter':
+          return 'Fliegengitter';
+        case 'dachfenster':
+          return 'Dachfenster';
+        default:
+          return t;
+      }
+    }
+
+    // Helfer: Kopfzeile (oben auf jeder Seite)
+    pw.Widget header() {
+      return pw.Container(
+        padding: const pw.EdgeInsets.only(bottom: 10),
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Container(
+              width: 28,
+              height: 28,
+              decoration: pw.BoxDecoration(
+                color: primary,
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Center(
+                child: pw.Text("FP",
+                    style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.white)),
+              ),
+            ),
+            pw.SizedBox(width: 10),
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text("FensterPro – Aufmaß", style: h2),
+                  pw.Text(projectName, style: small),
+                ],
+              ),
+            ),
+            pw.Text(df.format(now), style: small),
+          ],
+        ),
+      );
+    }
+
+    // Helfer: Fußzeile
+    pw.Widget footer(pw.Context ctx) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.only(top: 10),
+        child: pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text("FensterPro", style: small),
+            pw.Text("Seite ${ctx.pageNumber} / ${ctx.pagesCount}", style: small),
+          ],
+        ),
+      );
+    }
+
+    // Helfer: Info-Kästchen
+    pw.Widget infoBox({required String title, required List<String> lines}) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.all(10),
+        decoration: pw.BoxDecoration(
+          color: lightGrey,
+          borderRadius: pw.BorderRadius.circular(10),
+          border: pw.Border.all(color: PdfColors.grey300),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(title,
+                style: pw.TextStyle(
+                    fontSize: 11,
+                    fontWeight: pw.FontWeight.bold,
+                    color: dark)),
+            pw.SizedBox(height: 6),
+            ...lines.map((l) => pw.Text(l, style: body)).toList(),
+          ],
+        ),
+      );
+    }
+
+    // Helfer: Tabellenblock pro Typ
+    pw.Widget tableForType(String type, List<Map<String, dynamic>> rows) {
+      // Spalten je Typ
+      List<String> headers;
+      List<List<String>> data;
+
+      String mm(dynamic v) => (v == null || v.toString().trim().isEmpty)
+          ? ""
+          : "${v.toString()}";
+
+      switch (type) {
+        case 'fenster':
+          headers = ["Nr", "BxH (mm)", "Öffnung", "Anschlag", "Rahmen", "Farbe", "Glas"];
+          data = rows.map((row) {
+            final d = (row['data'] as Map).cast<String, dynamic>();
+            return [
+              (d['fensterNr'] ?? '').toString(),
+              "${mm(d['breiteMm'])}×${mm(d['hoeheMm'])}",
+              (d['oeffnungsart'] ?? '').toString(),
+              (d['anschlagsrichtung'] ?? '').toString(),
+              (d['rahmenart'] ?? '').toString(),
+              (d['farbe'] ?? '').toString(),
+              (d['glasart'] ?? '').toString(),
+            ];
+          }).toList();
+          break;
+
+        case 'zimmertuer':
+          headers = ["Nr", "BxH (mm)", "Öffnung", "Anschlag", "Rahmen", "Zarge", "Farbe"];
+          data = rows.map((row) {
+            final d = (row['data'] as Map).cast<String, dynamic>();
+            return [
+              (d['tuerNr'] ?? '').toString(),
+              "${mm(d['breiteMm'])}×${mm(d['hoeheMm'])}",
+              (d['oeffnungsart'] ?? '').toString(),
+              (d['anschlag'] ?? '').toString(),
+              (d['rahmenart'] ?? '').toString(),
+              (d['zarge'] ?? '').toString(),
+              (d['farbe'] ?? '').toString(),
+            ];
+          }).toList();
+          break;
+
+        case 'haustuer':
+          headers = ["Nr", "BxH (mm)", "Öffnung", "Anschlag", "Material", "Farbe", "Sicherh."];
+          data = rows.map((row) {
+            final d = (row['data'] as Map).cast<String, dynamic>();
+            return [
+              (d['haustuerNr'] ?? '').toString(),
+              "${mm(d['breiteMm'])}×${mm(d['hoeheMm'])}",
+              (d['oeffnungsart'] ?? '').toString(),
+              (d['anschlag'] ?? '').toString(),
+              (d['material'] ?? '').toString(),
+              (d['farbe'] ?? '').toString(),
+              (d['sicherheitsstufe'] ?? '').toString(),
+            ];
+          }).toList();
+          break;
+
+        case 'rolladen':
+          headers = ["Nr", "BxH (mm)", "Kastenart", "Kastenhöhe", "Panzer", "Farbe", "Antrieb"];
+          data = rows.map((row) {
+            final d = (row['data'] as Map).cast<String, dynamic>();
+            return [
+              (d['rolladenNr'] ?? '').toString(),
+              "${mm(d['breiteMm'])}×${mm(d['hoeheMm'])}",
+              (d['kastenart'] ?? '').toString(),
+              (d['kastenhoeheMm'] ?? '').toString(),
+              (d['panzerprofil'] ?? '').toString(),
+              (d['farbe'] ?? '').toString(),
+              (d['antrieb'] ?? '').toString(),
+            ];
+          }).toList();
+          break;
+
+        case 'fliegengitter':
+          headers = ["Nr", "BxH (mm)", "Typ", "Rahmenfarbe", "Gewebe", "Montage", "Hinweis"];
+          data = rows.map((row) {
+            final d = (row['data'] as Map).cast<String, dynamic>();
+            return [
+              (d['gitterNr'] ?? '').toString(),
+              "${mm(d['breiteMm'])}×${mm(d['hoeheMm'])}",
+              (d['typ'] ?? '').toString(),
+              (d['rahmenfarbe'] ?? '').toString(),
+              (d['gewebe'] ?? '').toString(),
+              (d['montage'] ?? '').toString(),
+              (d['notizen'] ?? '').toString(),
+            ];
+          }).toList();
+          break;
+
+        case 'dachfenster':
+          headers = ["Nr", "BxH (mm)", "Hersteller", "Typ", "Öffnung", "Verglasung", "Sicherh."];
+          data = rows.map((row) {
+            final d = (row['data'] as Map).cast<String, dynamic>();
+            return [
+              (d['dachfensterNr'] ?? '').toString(),
+              "${mm(d['breiteMm'])}×${mm(d['hoeheMm'])}",
+              (d['hersteller'] ?? '').toString(),
+              (d['typ'] ?? '').toString(),
+              (d['oeffnungsart'] ?? '').toString(),
+              (d['verglasung'] ?? '').toString(),
+              (d['sicherheitsstufe'] ?? '').toString(),
+            ];
+          }).toList();
+          break;
+
+        default:
+          headers = ["Info"];
+          data = rows.map((row) => ["${row['data']}"]).toList();
+      }
+
+      return pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+            decoration: pw.BoxDecoration(
+              color: primary,
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Text("${typeLabel(type)} (${rows.length})",
+                style: pw.TextStyle(
+                    fontSize: 11,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.white)),
+          ),
+          pw.SizedBox(height: 8),
+          pw.TableHelper.fromTextArray(
+            headers: headers,
+            data: data,
+            cellStyle: const pw.TextStyle(fontSize: 9),
+            headerStyle:
+                pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+            headerDecoration:
+                const pw.BoxDecoration(color: PdfColors.grey200),
+            cellAlignment: pw.Alignment.centerLeft,
+            columnWidths: {
+              0: const pw.FixedColumnWidth(52),
+            },
+            border: pw.TableBorder.all(color: PdfColors.grey300),
+          ),
+          pw.SizedBox(height: 12),
+        ],
+      );
+    }
+
+    // ----------------------------
+    // 4A) Deckblatt
+    // ----------------------------
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(28),
+        build: (ctx) {
+          final totalItems = items.length;
+          final totalRooms = rooms.length;
+
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              header(),
+              pw.SizedBox(height: 16),
+              pw.Text("Aufmaßprotokoll", style: h1),
+              pw.SizedBox(height: 10),
+
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Expanded(
+                    child: infoBox(
+                      title: "Projektinformationen",
+                      lines: [
+                        "Projekt: $projectName",
+                        "Kunde: ${customer.isEmpty ? "—" : customer}",
+                        "Adresse: ${address.isEmpty ? "—" : address}",
+                        "Export: ${df.format(now)}",
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(width: 12),
+                  pw.Expanded(
+                    child: infoBox(
+                      title: "Übersicht",
+                      lines: [
+                        "Räume: $totalRooms",
+                        "Positionen: $totalItems",
+                        "Einheit: mm",
+                        "Quelle: Supabase Cloud",
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              pw.SizedBox(height: 16),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  borderRadius: pw.BorderRadius.circular(10),
+                  border: pw.Border.all(color: PdfColors.grey300),
+                ),
+                child: pw.Text(
+                  "Hinweis: Dieses Dokument wurde automatisch in FensterPro erzeugt. "
+                  "Alle Maße und Angaben sind vor Bestellung/Montage zu prüfen.",
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+              ),
+
+              pw.Spacer(),
+
+              // Unterschriftenblock
+              pw.Container(
+                padding: const pw.EdgeInsets.all(12),
+                decoration: pw.BoxDecoration(
+                  color: lightGrey,
+                  borderRadius: pw.BorderRadius.circular(10),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text("Unterschriften", style: h2),
+                    pw.SizedBox(height: 12),
+                    pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              pw.Container(height: 1, color: PdfColors.grey600),
+                              pw.SizedBox(height: 6),
+                              pw.Text("Monteur / Aufmaßnehmer", style: small),
+                            ],
+                          ),
+                        ),
+                        pw.SizedBox(width: 18),
+                        pw.Expanded(
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              pw.Container(height: 1, color: PdfColors.grey600),
+                              pw.SizedBox(height: 6),
+                              pw.Text("Kunde / Auftraggeber", style: small),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    pw.SizedBox(height: 12),
+                    pw.Text("Datum: ____________________", style: small),
+                  ],
+                ),
+              ),
+
+              footer(ctx),
+            ],
+          );
+        },
+      ),
+    );
+
+    // ----------------------------
+    // 4B) Pro Raum eine Profi-Seite mit Tabellen
+    // ----------------------------
+    final order = [
+      'fenster',
+      'zimmertuer',
+      'haustuer',
+      'rolladen',
+      'fliegengitter',
+      'dachfenster'
+    ];
+
+    for (final room in rooms) {
+      final rid = room['id'] as String;
+      final rname = (room['name'] ?? '') as String;
+      final roomItems = itemsByRoom[rid] ?? [];
+
+      final grouped = <String, List<Map<String, dynamic>>>{};
+      for (final it in roomItems) {
+        final t = (it['type'] ?? '') as String;
+        grouped.putIfAbsent(t, () => []);
+        grouped[t]!.add(it);
+      }
+
+      doc.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(28),
+          header: (_) => header(),
+          footer: (ctx) => footer(ctx),
+          build: (ctx) {
+            final widgets = <pw.Widget>[];
+
+            widgets.add(
+              pw.Container(
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  color: lightGrey,
+                  borderRadius: pw.BorderRadius.circular(10),
+                ),
+                child: pw.Row(
+                  children: [
+                    pw.Expanded(
+                      child: pw.Text("Raum: $rname",
+                          style: pw.TextStyle(
+                              fontSize: 16,
+                              fontWeight: pw.FontWeight.bold,
+                              color: dark)),
+                    ),
+                    pw.Text("Positionen: ${roomItems.length}", style: small),
+                  ],
+                ),
+              ),
+            );
+            widgets.add(pw.SizedBox(height: 12));
+
+            if (roomItems.isEmpty) {
+              widgets.add(pw.Text("Keine Elemente in diesem Raum erfasst.", style: body));
+              return widgets;
+            }
+
+            for (final t in order) {
+              final list = grouped[t] ?? [];
+              if (list.isEmpty) continue;
+              widgets.add(tableForType(t, list));
+            }
+
+            // Falls später neue Typen existieren:
+            for (final entry in grouped.entries) {
+              if (order.contains(entry.key)) continue;
+              widgets.add(tableForType(entry.key, entry.value));
+            }
+
+            // Notiz / Bemerkungen am Ende
+            widgets.add(
+              pw.Container(
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: pw.BorderRadius.circular(10),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text("Bemerkungen", style: h2),
+                    pw.SizedBox(height: 30),
+                    pw.Container(height: 1, color: PdfColors.grey300),
+                    pw.SizedBox(height: 12),
+                    pw.Container(height: 1, color: PdfColors.grey300),
+                    pw.SizedBox(height: 12),
+                    pw.Container(height: 1, color: PdfColors.grey300),
+                  ],
+                ),
+              ),
+            );
+
+            return widgets;
+          },
+        ),
+      );
+    }
+
+    // ----------------------------
+    // 5) Anzeigen / Drucken / Teilen
+    // ----------------------------
+    final Uint8List bytes = await doc.save();
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => bytes,
+      name: "FensterPro_Aufmass_${projectName.replaceAll(' ', '_')}.pdf",
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("PDF Profi Export Fehler: $e")),
+    );
+  }
+}
