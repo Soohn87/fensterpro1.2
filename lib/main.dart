@@ -8,6 +8,10 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+
+
 /// =======================================================
 /// FENSTERPRO – CLEAN CLOUD APP (SUPABASE ONLY)
 /// =======================================================
@@ -769,133 +773,123 @@ class RoomMenuScreen extends StatelessWidget {
               mainAxisSpacing: 12,
               childAspectRatio: 1.25,
               children: [
-                _BigButton(
-                  icon: Icons.window,
-                  title: "Fenster",
-                  subtitle: "Cloud",
-                 onTap: () async {
-  final ok = await Navigator.push<bool?>(
-    context,
-    MaterialPageRoute(
-      builder: (_) => FensterFormProScreen(roomId: roomId),
-    ),
-  );
+  _BigButton(
+    icon: Icons.window,
+    title: "Fenster",
+    subtitle: "Profi Aufmaß",
+    onTap: () async {
+      final ok = await Navigator.push<bool?>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => FensterFormProScreen(roomId: roomId),
+        ),
+      );
 
-  if (ok == true) {
-    _toast(context, "Fenster gespeichert ✅");
-  }
-},
+      if (ok == true) {
+        _toast(context, "Fenster gespeichert ✅");
+      }
+    },
+  ),
 
-
-                _BigButton(
-                  icon: Icons.door_front_door,
-                  title: "Zimmertüren",
-                  subtitle: "Cloud",
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ItemsCloudListScreen(
-                        roomId: roomId,
-                        roomName: roomName,
-                        type: "zimmertuer",
-                        typeLabel: "Zimmertüren",
-                      ),
-                    ),
-                  ),
-                ),
-                _BigButton(
-                  icon: Icons.meeting_room,
-                  title: "Haustüren",
-                  subtitle: "Cloud",
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ItemsCloudListScreen(
-                        roomId: roomId,
-                        roomName: roomName,
-                        type: "haustuer",
-                        typeLabel: "Haustüren",
-                      ),
-                    ),
-                  ),
-                ),
-                _BigButton(
-                  icon: Icons.blinds,
-                  title: "Rollladen",
-                  subtitle: "Cloud",
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ItemsCloudListScreen(
-                        roomId: roomId,
-                        roomName: roomName,
-                        type: "rolladen",
-                        typeLabel: "Rollladen",
-                      ),
-                    ),
-                  ),
-                ),
-                _BigButton(
-                  icon: Icons.bug_report,
-                  title: "Fliegengitter",
-                  subtitle: "Cloud",
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ItemsCloudListScreen(
-                        roomId: roomId,
-                        roomName: roomName,
-                        type: "fliegengitter",
-                        typeLabel: "Fliegengitter",
-                      ),
-                    ),
-                  ),
-                ),
-                _BigButton(
-                  icon: Icons.roofing,
-                  title: "Dachfenster",
-                  subtitle: "Cloud",
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ItemsCloudListScreen(
-                        roomId: roomId,
-                        roomName: roomName,
-                        type: "dachfenster",
-                        typeLabel: "Dachfenster",
-                      ),
-                    ),
-                  ),
-                ),
-
-                // PDF Button direkt im Raum-Menü ✅
-                _BigButton(
-                  icon: Icons.picture_as_pdf,
-                  title: "PDF Aufmaß",
-                  subtitle: "Profi Layout",
-                  onTap: () => exportRoomPdf(
-                    context: context,
-                    projectId: projectId,
-                    projectName: projectName,
-                    roomId: roomId,
-                    roomName: roomName,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            const _InfoBox(
-              lines: [
-                "Alles wird automatisch in Supabase gespeichert.",
-                "PDF Export erzeugt ein Profi-Aufmaßblatt.",
-              ],
-            ),
-          ],
+  _BigButton(
+    icon: Icons.door_front_door,
+    title: "Zimmertüren",
+    subtitle: "Cloud",
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ItemsCloudListScreen(
+          roomId: roomId,
+          roomName: roomName,
+          type: "zimmertuer",
+          typeLabel: "Zimmertüren",
         ),
       ),
-    );
-  }
-}
+    ),
+  ),
+
+  _BigButton(
+    icon: Icons.meeting_room,
+    title: "Haustüren",
+    subtitle: "Cloud",
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ItemsCloudListScreen(
+          roomId: roomId,
+          roomName: roomName,
+          type: "haustuer",
+          typeLabel: "Haustüren",
+        ),
+      ),
+    ),
+  ),
+
+  _BigButton(
+    icon: Icons.blinds,
+    title: "Rollladen",
+    subtitle: "Cloud",
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ItemsCloudListScreen(
+          roomId: roomId,
+          roomName: roomName,
+          type: "rolladen",
+          typeLabel: "Rollladen",
+        ),
+      ),
+    ),
+  ),
+
+  _BigButton(
+    icon: Icons.bug_report,
+    title: "Fliegengitter",
+    subtitle: "Cloud",
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ItemsCloudListScreen(
+          roomId: roomId,
+          roomName: roomName,
+          type: "fliegengitter",
+          typeLabel: "Fliegengitter",
+        ),
+      ),
+    ),
+  ),
+
+  _BigButton(
+    icon: Icons.roofing,
+    title: "Dachfenster",
+    subtitle: "Cloud",
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ItemsCloudListScreen(
+          roomId: roomId,
+          roomName: roomName,
+          type: "dachfenster",
+          typeLabel: "Dachfenster",
+        ),
+      ),
+    ),
+  ),
+
+  _BigButton(
+    icon: Icons.picture_as_pdf,
+    title: "PDF Aufmaß",
+    subtitle: "Profi Layout",
+    onTap: () => exportRoomPdf(
+      context: context,
+      projectId: projectId,
+      projectName: projectName,
+      roomId: roomId,
+      roomName: roomName,
+    ),
+  ),
+],
+
 
 /// =======================================================
 /// GENERIC ITEMS LIST (CLOUD)
@@ -1194,8 +1188,6 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
     );
   }
 }
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
 
 class FensterFormProScreen extends StatefulWidget {
   final String roomId;
