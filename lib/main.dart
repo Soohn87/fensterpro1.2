@@ -97,48 +97,33 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _login() async {
-    final e = _email.text.trim();
-    final p = _pw.text.trim();
-    if (e.isEmpty || p.isEmpty) {
-      _toast(context, "Bitte E-Mail und Passwort eingeben");
-      return;
-    }
+ Future<void> register() async {
+  final email = _email.text.trim();
+  final pass = _password.text.trim();
 
-    setState(() => _loading = true);
-    try {
-      await Supabase.instance.client.auth.signInWithPassword(
-        email: e,
-        password: p,
-      );
-    } catch (err) {
-      _toast(context, "Login Fehler: $err");
-    } finally {
-      setState(() => _loading = false);
-    }
+  if (email.isEmpty || pass.isEmpty) {
+    _toast(context, "Bitte E-Mail und Passwort eingeben");
+    return;
   }
 
-  Future<void> _register() async {
-    final e = _email.text.trim();
-    final p = _pw.text.trim();
-    if (e.isEmpty || p.isEmpty) {
-      _toast(context, "Bitte E-Mail und Passwort eingeben");
-      return;
-    }
+  try {
+    final res = await Supabase.instance.client.auth.signUp(
+      email: email,
+      password: pass,
+    );
 
-    setState(() => _loading = true);
-    try {
-      await Supabase.instance.client.auth.signUp(
-        email: e,
-        password: p,
-      );
-      _toast(context, "Registriert ✅ Jetzt einloggen.");
-    } catch (err) {
-      _toast(context, "Register Fehler: $err");
-    } finally {
-      setState(() => _loading = false);
+    // Falls Confirm Email = ON, user ist evtl. null bis bestätigt
+    if (res.user == null) {
+      _toast(context, "Registriert ✅ Bitte Email bestätigen.");
+    } else {
+      _toast(context, "Registriert ✅ Du bist eingeloggt.");
+      if (mounted) Navigator.pop(context);
     }
+  } catch (e) {
+    _toast(context, "Register Fehler: $e");
   }
+}
+
 
   Widget _tf(TextEditingController c, String label,
       {bool pw = false, TextInputType kb = TextInputType.text}) {
