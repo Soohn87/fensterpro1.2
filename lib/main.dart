@@ -1,12 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:typed_data';
+
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter/material.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -581,7 +581,7 @@ class ProjectDetailScreen extends StatelessWidget {
           FilledButton(
             onPressed: () {
               final v = c.text.trim();
-              if (v.isEmpty) ;
+              if (v.isEmpty) return ;
               Navigator.pop(context, v);
             },
             child: const Text("OK"),
@@ -609,13 +609,13 @@ class RoomDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-     AnimatedBuilder(
+    return AnimatedBuilder(
       animation: state,
       builder: (context, _) {
         final proj = state.projects.firstWhere((p) => p.id == projectId);
         final r = proj.rooms.firstWhere((rr) => rr.id == roomId);
 
-         Scaffold(
+        return Scaffold(
           appBar: AppBar(title: Text(r.name)),
           body: Padding(
             padding: const EdgeInsets.all(14),
@@ -630,93 +630,91 @@ class RoomDetailScreen extends StatelessWidget {
                   childAspectRatio: 1.25,
                   children: [
                     _BigButton(
-  icon: Icons.window,
-  title: "Fenster",
-  subtitle: "Cloud • Erfassen / ansehen",
-  onTap: () => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => FensterCloudListScreen(
-        roomId: roomId,
-        roomName: roomName,
-      ),
-    ),
-  ),
-),
-
+                      icon: Icons.window,
+                      title: "Fenster",
+                      subtitle: "Cloud • Erfassen / ansehen",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FensterCloudListScreen(
+                            roomId: roomId,
+                            roomName: r.name,
+                          ),
+                        ),
+                      ),
+                    ),
                     _BigButton(
-  icon: Icons.door_front_door,
-  title: "Zimmertüren",
-  subtitle: "Cloud • Erfassen / ansehen",
-  onTap: () => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => TuerenCloudListScreen(
-        roomId: roomId,
-        roomName: roomName,
-      ),
-    ),
-  ),
-),
-
+                      icon: Icons.door_front_door,
+                      title: "Zimmertüren",
+                      subtitle: "Cloud • Erfassen / ansehen",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => TuerenCloudListScreen(
+                            roomId: roomId,
+                            roomName: r.name,
+                          ),
+                        ),
+                      ),
+                    ),
                     _BigButton(
-  icon: Icons.meeting_room,
-  title: "Haustüren",
-  subtitle: "Cloud • Erfassen / ansehen",
-  onTap: () => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => HaustuerCloudListScreen(
-        roomId: roomId,
-        roomName: roomName,
-      ),
-    ),
-  ),
-),
-
-                   _BigButton(
-  icon: Icons.blinds,
-  title: "Rollladen",
-  subtitle: "Cloud • Erfassen / ansehen",
-  onTap: () => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => RolladenCloudListScreen(
-        roomId: roomId,
-        roomName: roomName,
-      ),
-    ),
-  ),
-),
-_BigButton(
-  icon: Icons.bug_report,
-  title: "Fliegengitter",
-  subtitle: "Cloud • Erfassen / ansehen",
-  onTap: () => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => FliegengitterCloudListScreen(
-        roomId: roomId,
-        roomName: roomName,
-      ),
-    ),
-  ),
-),
-_BigButton(
-  icon: Icons.roofing,
-  title: "Dachfenster",
-  subtitle: "Cloud • Erfassen / ansehen",
-  onTap: () => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => DachfensterCloudListScreen(
-        roomId: roomId,
-        roomName: roomName,
-      ),
-    ),
-  ),
-),
-
+                      icon: Icons.meeting_room,
+                      title: "Haustüren",
+                      subtitle: "Cloud • Erfassen / ansehen",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => HaustuerCloudListScreen(
+                            roomId: roomId,
+                            roomName: r.name,
+                          ),
+                        ),
+                      ),
+                    ),
+                    _BigButton(
+                      icon: Icons.blinds,
+                      title: "Rollladen",
+                      subtitle: "Cloud • Erfassen / ansehen",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => RolladenCloudListScreen(
+                            roomId: roomId,
+                            roomName: r.name,
+                          ),
+                        ),
+                      ),
+                    ),
+                    _BigButton(
+                      icon: Icons.bug_report,
+                      title: "Fliegengitter",
+                      subtitle: "Cloud • Erfassen / ansehen",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FliegengitterCloudListScreen(
+                            roomId: roomId,
+                            roomName: r.name,
+                          ),
+                        ),
+                      ),
+                    ),
+                    _BigButton(
+                      icon: Icons.roofing,
+                      title: "Dachfenster",
+                      subtitle: "Cloud • Erfassen / ansehen",
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DachfensterCloudListScreen(
+                            roomId: roomId,
+                            roomName: r.name,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 14),
                 _InfoBox(
                   lines: [
@@ -736,7 +734,6 @@ _BigButton(
     );
   }
 }
-
 
 /// ===============================
 /// FENSTER
