@@ -1192,6 +1192,372 @@ class _ItemFormScreenState extends State<ItemFormScreen> {
     );
   }
 }
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+
+class FensterFormProScreen extends StatefulWidget {
+  final String roomId;
+
+  const FensterFormProScreen({
+    super.key,
+    required this.roomId,
+  });
+
+  @override
+  State<FensterFormProScreen> createState() => _FensterFormProScreenState();
+}
+
+class _FensterFormProScreenState extends State<FensterFormProScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  // Pflicht
+  final _fensterNr = TextEditingController();
+  final _breite = TextEditingController();
+  final _hoehe = TextEditingController();
+  final _farbe = TextEditingController();
+
+  // Optional
+  final _notizen = TextEditingController();
+
+  // Dropdowns
+  String _oeffnung = "Dreh-Kipp";
+  String _anschlag = "DIN Links";
+  String _rahmen = "Kunststoff";
+  String _glasart = "2-fach";
+  String _glasdicke = "24 mm";
+  String _sicherheit = "Standard";
+  bool _barrierefrei = false;
+
+  // Fotos (Pflicht min 1)
+  final _picker = ImagePicker();
+  final List<XFile> _photos = [];
+
+  @override
+  void dispose() {
+    _fensterNr.dispose();
+    _breite.dispose();
+    _hoehe.dispose();
+    _farbe.dispose();
+    _notizen.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addPhotoCamera() async {
+    final shot = await _picker.pickImage(source: ImageSource.camera, imageQuality: 75);
+    if (shot == null) return;
+    setState(() => _photos.add(shot));
+  }
+
+  Future<void> _addPhotoGallery() async {
+    final shot = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 75);
+    if (shot == null) return;
+    setState(() => _photos.add(shot));
+  }
+
+  void _removePhoto(int index) {
+    setState(() => _photos.removeAt(index));
+  }
+
+  Future<List<String>> _uploadPhotosToSupabase(String itemId) async {
+    final client = Supabase.instance.client;
+
+    // Upload-Pfade: fensterfotos/<roomId>/<itemId>/<timestamp>.jpg
+    final List<String> publicUrls = [];
+
+    for (final p in _photos) {
+      final file = File(p.path);
+      final bytes = await file.readAsBytes();
+
+      final ext = p.path.toLowerCase().endsWith(".png") ? "png" : "jpg";
+      final path =
+          "${widget.roomId}/$itemId/${DateTime.now().microsecondsSinceEpoch}.$ext";
+
+      await client.storage.from("fensterfotos").uploadBinary(
+            path,
+            bytes,
+            fileOptions: FileOptions(
+              contentType: ext == "png" ? "image/png" : "image/jpeg",
+              upsert: true,
+            ),
+          );
+
+      final url = client.storage.from("fensterfotos").getPublicUrl(path);
+      publicUrls.add(url);
+    }
+
+    return publicUrls;
+  }
+
+  Widget _tf(TextEditingController c, String label,
+      {TextInputType kb = TextInputType.text}) {
+    final required = label.contains("*");
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextFormField(
+        controller: c,
+        keyboardType: kb,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        validator: (v) {
+          if (!required) return null;
+          if (v == null || v.trim().isEmpty) return "Pflichtfeld";
+          return null;
+        },
+      ),
+    );
+  }
+
+  Widget _dd({
+    required String label,
+    required String value,
+    required List<String> items,
+    required void Function(String v) onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: DropdownButtonFormField<String>(
+        value: value,
+        items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+        onChanged: (v) => onChanged(v ?? value),
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_photos.isEmpty) {
+      _toast(context, "Mindestens 1 Foto ist Pflicht 📸");
+      return;
+    }
+
+    final client = Supabase.instance.client;
+
+    try {
+      // 1) item row anlegen ohne fotos
+      final inserted = await client.from("items").insert({
+        "room_id": widget.roomId,
+        "type": "fenster",
+        "data": {
+          "fensterNr": _fensterNr.text.trim(),
+          "breiteMm": _breite.text.trim(),
+          "hoeheMm": _hoehe.text.trim(),
+          "oeffnungsart": _oeffnung,
+          "anschlagsrichtung": _anschlag,
+          "rahmenart": _rahmen,
+          "farbe": _farbe.text.trim(),
+          "glasart": _glasart,
+          "glasdicke": _glasdicke,
+          "sicherheitsstufe": _sicherheit,
+          "barrierefrei": _barrierefrei ? "Ja" : "Nein",
+          "notizen": _notizen.text.trim(),
+          "fotos": [], // später update
+        }
+      }).select("id").single();
+
+      final itemId = inserted["id"] as String;
+
+      // 2) fotos hochladen
+      final urls = await _uploadPhotosToSupabase(itemId);
+
+      // 3) item update mit foto-urls
+      await client.from("items").update({
+        "data": {
+          "fensterNr": _fensterNr.text.trim(),
+          "breiteMm": _breite.text.trim(),
+          "hoeheMm": _hoehe.text.trim(),
+          "oeffnungsart": _oeffnung,
+          "anschlagsrichtung": _anschlag,
+          "rahmenart": _rahmen,
+          "farbe": _farbe.text.trim(),
+          "glasart": _glasart,
+          "glasdicke": _glasdicke,
+          "sicherheitsstufe": _sicherheit,
+          "barrierefrei": _barrierefrei ? "Ja" : "Nein",
+          "notizen": _notizen.text.trim(),
+          "fotos": urls,
+        }
+      }).eq("id", itemId);
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      _toast(context, "Fehler beim Speichern: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Fenster • Profi Aufmaß")),
+      body: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              const Text("Pflichtfelder",
+                  style: TextStyle(fontWeight: FontWeight.w900)),
+              const SizedBox(height: 10),
+
+              _tf(_fensterNr, "FensterNr. *"),
+              Row(
+                children: [
+                  Expanded(
+                    child: _tf(_breite, "Breite (mm) *",
+                        kb: TextInputType.number),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _tf(_hoehe, "Höhe (mm) *", kb: TextInputType.number),
+                  ),
+                ],
+              ),
+
+              _dd(
+                label: "Öffnungsart *",
+                value: _oeffnung,
+                items: const [
+                  "Dreh-Kipp",
+                  "Dreh",
+                  "Kipp",
+                  "Schiebe",
+                  "Festverglasung"
+                ],
+                onChanged: (v) => setState(() => _oeffnung = v),
+              ),
+
+              _dd(
+                label: "Anschlagsrichtung *",
+                value: _anschlag,
+                items: const ["DIN Links", "DIN Rechts", "—"],
+                onChanged: (v) => setState(() => _anschlag = v),
+              ),
+
+              _dd(
+                label: "Rahmenart *",
+                value: _rahmen,
+                items: const ["Kunststoff", "Holz", "Aluminium", "Holz-Alu"],
+                onChanged: (v) => setState(() => _rahmen = v),
+              ),
+
+              _tf(_farbe, "Farbe *"),
+
+              _dd(
+                label: "Glasart *",
+                value: _glasart,
+                items: const ["2-fach", "3-fach", "Sicherheitsglas", "Schallschutz"],
+                onChanged: (v) => setState(() => _glasart = v),
+              ),
+
+              _dd(
+                label: "Glasdicke *",
+                value: _glasdicke,
+                items: const ["24 mm", "28 mm", "32 mm", "36 mm", "40 mm", "44 mm"],
+                onChanged: (v) => setState(() => _glasdicke = v),
+              ),
+
+              _dd(
+                label: "Sicherheitsstufe *",
+                value: _sicherheit,
+                items: const ["Standard", "RC1", "RC2", "RC3"],
+                onChanged: (v) => setState(() => _sicherheit = v),
+              ),
+
+              SwitchListTile(
+                value: _barrierefrei,
+                onChanged: (v) => setState(() => _barrierefrei = v),
+                title: const Text("Barrierefrei"),
+              ),
+
+              const SizedBox(height: 10),
+              const Text("Fotos (Pflicht) 📸",
+                  style: TextStyle(fontWeight: FontWeight.w900)),
+              const SizedBox(height: 8),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _addPhotoCamera,
+                      icon: const Icon(Icons.photo_camera),
+                      label: const Text("Kamera"),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _addPhotoGallery,
+                      icon: const Icon(Icons.image),
+                      label: const Text("Galerie"),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              if (_photos.isEmpty)
+                const Text("Noch keine Fotos hinzugefügt.",
+                    style: TextStyle(color: Colors.black54)),
+
+              if (_photos.isNotEmpty)
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: List.generate(_photos.length, (i) {
+                    return Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            File(_photos[i].path),
+                            width: 110,
+                            height: 110,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Positioned(
+                          right: 4,
+                          top: 4,
+                          child: InkWell(
+                            onTap: () => _removePhoto(i),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close,
+                                  size: 16, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ),
+
+              const SizedBox(height: 14),
+              _tf(_notizen, "Notizen (optional)"),
+
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: _save,
+                icon: const Icon(Icons.check),
+                label: const Text("Fenster speichern"),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// =======================================================
 /// PDF EXPORT PROFI: NUR EIN RAUM (aus Supabase)
