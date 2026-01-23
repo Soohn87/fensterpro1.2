@@ -773,17 +773,19 @@ class RoomMenuScreen extends StatelessWidget {
                   icon: Icons.window,
                   title: "Fenster",
                   subtitle: "Cloud",
-                 onTap: () => Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => ItemsCloudListScreen(
-      roomId: roomId,
-      roomName: roomName,
-      type: "fenster",
-      typeLabel: "Fenster",
+                 onTap: () async {
+  final ok = await Navigator.push<bool?>(
+    context,
+    MaterialPageRoute(
+      builder: (_) => FensterFormProScreen(roomId: roomId),
     ),
-  ),
-),
+  );
+
+  if (ok == true) {
+    _toast(context, "Fenster gespeichert ✅");
+  }
+},
+
 
                 _BigButton(
                   icon: Icons.door_front_door,
