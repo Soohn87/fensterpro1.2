@@ -154,8 +154,10 @@ class _LoginScreenState extends State<LoginScreen> {
             _tf(_pw, "Passwort", pw: true),
             const SizedBox(height: 10),
             FilledButton(
-              onPressed: _loading ? null : _login,
-              child: _loading
+  onPressed: register,
+  child: const Text("Registrieren"),
+),
+
                   ? const SizedBox(
                       height: 18, width: 18, child: CircularProgressIndicator())
                   : const Text("Einloggen"),
