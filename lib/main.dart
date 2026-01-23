@@ -12,8 +12,8 @@ import 'package:printing/printing.dart';
 /// FENSTERPRO – CLEAN CLOUD APP (SUPABASE ONLY)
 /// =======================================================
 
-const String SUPABASE_URL = https://womnpscrxhmrajcrrkmd.supabase.co;
-const String SUPABASE_ANON_KEY = sb_secret_BocH_uVPmN0ZaIswB-J64g_lkwMs34J;
+const String SUPABASE_URL = "https://womnpscrxhmrajcrrkmd.supabase.co";
+const String SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvbW5wc2NyeGhtcmFqY3Jya21kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0MDczMTIsImV4cCI6MjA4Mzk4MzMxMn0.e21WwbdjEOMnfQOA-xqxvgEcJ-WCDtYDRTid3qMr_lw";
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
