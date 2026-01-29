@@ -2021,3 +2021,24 @@ Future<String?> _askText(
 
   return res;
 }
+Widget _tf(
+  TextEditingController c,
+  String label, {
+  bool pw = false,
+  TextInputType? kb,
+}) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: TextField(
+      controller: c,
+      obscureText: pw,
+      keyboardType: kb,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    ),
+  );
+}
