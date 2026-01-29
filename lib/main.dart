@@ -153,25 +153,23 @@ class _LoginScreenState extends State<LoginScreen> {
             _tf(_email, "E-Mail", kb: TextInputType.emailAddress),
             _tf(_pw, "Passwort", pw: true),
             const SizedBox(height: 10),
-            FilledButton(
-  onPressed: register,
-  child: const Text("Registrieren"),
+            const SizedBox(height: 10),
+
+FilledButton(
+  onPressed: _loading ? null : login,
+  child: _loading
+      ? const SizedBox(
+          height: 18,
+          width: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        )
+      : const Text("Einloggen"),
 ),
 
-                  const SizedBox(
-                      height: 18, width: 18, child: CircularProgressIndicator())
-                  : const Text("Einloggen"),
-            ),
-            TextButton(
-              onPressed: _loading ? null : _register,
-              child: const Text("Registrieren"),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+TextButton(
+  onPressed: _loading ? null : register,
+  child: const Text("Registrieren"),
+),
 
 /// =======================================================
 /// COMPANY GATE: user muss firma haben (members table)
