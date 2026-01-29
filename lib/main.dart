@@ -87,58 +87,47 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _email = TextEditingController();
   final _pw = TextEditingController();
-
   bool _loading = false;
 
-  @override
-  void dispose() {
-    _email.dispose();
-    _pw.dispose();
-    super.dispose();
-  }
+  Future<void> login() async {
+    final email = _email.text.trim();
+    final pass = _pw.text.trim();
 
- Future<void> register() async {
-  final email = _email.text.trim();
-  final pass = _password.text.trim();
-
-  if (email.isEmpty || pass.isEmpty) {
-    _toast(context, "Bitte E-Mail und Passwort eingeben");
-    return;
-  }
-
-  try {
-    final res = await Supabase.instance.client.auth.signUp(
-      email: email,
-      password: pass,
-    );
-
-    // Falls Confirm Email = ON, user ist evtl. null bis bestätigt
-    if (res.user == null) {
-      _toast(context, "Registriert ✅ Bitte Email bestätigen.");
-    } else {
-      _toast(context, "Registriert ✅ Du bist eingeloggt.");
-      if (mounted) Navigator.pop(context);
+    if (email.isEmpty || pass.isEmpty) {
+      _toast(context, "Bitte E-Mail und Passwort eingeben");
+      return;
     }
-  } catch (e) {
-    _toast(context, "Register Fehler: $e");
+
+    setState(() => _loading = true);
+    try {
+      await Supabase.instance.client.auth
+          .signInWithPassword(email: email, password: pass);
+    } catch (e) {
+      _toast(context, "Login Fehler: $e");
+    } finally {
+      setState(() => _loading = false);
+    }
   }
-}
 
+  Future<void> register() async {
+    final email = _email.text.trim();
+    final pass = _pw.text.trim();
 
-  Widget _tf(TextEditingController c, String label,
-      {bool pw = false, TextInputType kb = TextInputType.text}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: TextField(
-        controller: c,
-        obscureText: pw,
-        keyboardType: kb,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-      ),
-    );
+    if (email.isEmpty || pass.isEmpty) {
+      _toast(context, "Bitte E-Mail und Passwort eingeben");
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      await Supabase.instance.client.auth
+          .signUp(email: email, password: pass);
+      _toast(context, "Registriert ✅ Bitte Email bestätigen.");
+    } catch (e) {
+      _toast(context, "Register Fehler: $e");
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
   @override
@@ -149,27 +138,31 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.all(14),
         child: Column(
           children: [
-            const SizedBox(height: 8),
             _tf(_email, "E-Mail", kb: TextInputType.emailAddress),
             _tf(_pw, "Passwort", pw: true),
-            const SizedBox(height: 10),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
 
-FilledButton(
-  onPressed: _loading ? null : login,
-  child: _loading
-      ? const SizedBox(
-          height: 18,
-          width: 18,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        )
-      : const Text("Einloggen"),
-),
+            FilledButton(
+              onPressed: _loading ? null : login,
+              child: _loading
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text("Einloggen"),
+            ),
 
-TextButton(
-  onPressed: _loading ? null : register,
-  child: const Text("Registrieren"),
-),
+            TextButton(
+              onPressed: _loading ? null : register,
+              child: const Text("Registrieren"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// =======================================================
 /// COMPANY GATE: user muss firma haben (members table)
