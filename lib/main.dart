@@ -158,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
   child: const Text("Registrieren"),
 ),
 
-                  ? const SizedBox(
+                  const SizedBox(
                       height: 18, width: 18, child: CircularProgressIndicator())
                   : const Text("Einloggen"),
             ),
