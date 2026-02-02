@@ -44,18 +44,10 @@ class FensterProApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: const Color(0xFF0B6EF3),
       ),
-      home: StreamBuilder<AuthState>(
-  stream: Supabase.instance.client.auth.onAuthStateChange,
-  builder: (context, snapshot) {
-    final session = snapshot.data?.session;
-
-    if (session == null) {
-      return const LoginScreen();
-    }
-
-    return const CompanyGateScreen();
-  },
-),
+      home: const SupabaseAuthGate(),
+    );
+  }
+}
 
 
 /// =======================================================
@@ -83,6 +75,7 @@ class SupabaseAuthGate extends StatelessWidget {
     );
   }
 }
+
 
 /// =======================================================
 /// LOGIN SCREEN
