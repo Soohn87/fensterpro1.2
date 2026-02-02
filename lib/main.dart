@@ -1,3 +1,5 @@
+import 'auth_gate.dart';
+
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
